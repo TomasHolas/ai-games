@@ -34,8 +34,13 @@ class PokerGame(BaseGame):
         self.deck = Deck()
         self.community_cards: List[Card] = []
         self.pot = 0
+        
         # Randomize starting dealer position
-        self.dealer_idx = random.randint(0, len(player_names) - 1)
+        # We set it effectively to (Target - 1) so that the first call to start_new_hand()
+        # (which increments dealer_idx) lands exactly on our random Target.
+        target_dealer = random.randint(0, len(player_names) - 1)
+        self.dealer_idx = (target_dealer - 1) % len(player_names)
+        
         self.current_player_idx = 0
         self.stage = PREFLOP
         self.wins = {name: 0 for name in player_names}

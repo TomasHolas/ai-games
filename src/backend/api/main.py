@@ -174,17 +174,26 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
                 await websocket.close()
                 return
 
-            game = PokerGame(player_names=player_ids)
+            # Generate unique names/IDs for the game engine
+            # This is critical because PokerGame uses names to track winner_idx
+            unique_player_names = []
+            for i, pid in enumerate(player_ids):
+                if pid == "human":
+                    color_name = PLAYER_COLOR_NAMES[i % len(PLAYER_COLOR_NAMES)]
+                    # Use "Human Red", "Human Blue" etc. as the internal Game Name
+                    unique_player_names.append(f"Human {color_name}")
+                else:
+                    unique_player_names.append(pid)
+
+            game = PokerGame(player_names=unique_player_names)
             sys_prompt = PROMPT_POKER
 
             for i, pid in enumerate(player_ids):
-                # We use simple naming, could use P1, P2 etc.
-                if pid == "human":
-                    color_name = PLAYER_COLOR_NAMES[i % len(PLAYER_COLOR_NAMES)]
-                    name = f"Human {color_name}"
-                else:
-                    name = pid
-
+                # We interpret the request ID (pid) to get the LLM instance
+                # But use the unique name we generated above for the Player object
+                name = unique_player_names[i]
+                
+                # symbol is just index for Poker
                 p = Player(name=name, symbol=str(i), llm=get_llm_instance(pid))
                 players.append(p)
                 model_stats[name] = {"latency_sum": 0, "tokens": 0, "invalid_moves": 0}

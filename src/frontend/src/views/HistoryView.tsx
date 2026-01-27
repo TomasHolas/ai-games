@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { History, Search, AlertTriangle, Grid3X3, Gamepad2, Coins } from 'lucide-react';
 import { ModelIcon } from '../components';
-import { API_ENDPOINTS } from '../config';
+import { API_ENDPOINTS, PLAYER_COLORS } from '../config';
 import type { ModelConfig } from '../types';
 
 interface HistoryRecord {
@@ -29,6 +29,12 @@ const GAME_TYPES = [
     { id: 'tictactoe_plus', label: 'Tic-Tac-Toe Plus', icon: Gamepad2 },
     { id: 'poker', label: "No-Limit Hold'em", icon: Grid3X3 },
 ];
+
+const GAME_BADGE_LABELS: Record<string, string> = {
+    'poker': 'POKER',
+    'tictactoe': '3x3',
+    'tictactoe_plus': '9x9',
+};
 
 export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch }) => {
     const [history, setHistory] = useState<HistoryRecord[]>([]);
@@ -112,89 +118,25 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
             ) : (
                 <div className="grid gap-4">
                     {filtered.map((game) => {
-
-                        const isMultiplayer = game.game_type === 'poker' || (game.players_list && game.players_list.length > 2);
+                        // UNIFIED VIEW (Based on Poker/Multiplayer Style)
+                        const players = game.players_list || [game.player1, game.player2];
+                        const winner = game.winner_model_id;
                         const isError = !!game.error_model_id;
 
-                        if (isMultiplayer) {
-                            const players = game.players_list || [game.player1, game.player2];
-                            const winner = game.winner_model_id;
+                        // Determine winner color & index
+                        let winnerColor = '#FACC15'; // Default Gold/Yellow
+                        let winnerIdx = -1;
 
-                            return (
-                                <div
-                                    key={game.match_id}
-                                    onClick={() => onSelectMatch(game.match_id)}
-                                    className="bg-surface border border-gray-800 p-4 rounded-xl flex items-center justify-between hover:bg-white/5 cursor-pointer transition-all group"
-                                >
-                                    <div className="flex items-center gap-6">
-                                        {/* Date & Game Icon */}
-                                        <div className="flex flex-col items-center min-w-[60px] gap-1">
-                                            <div className="text-[10px] text-gray-500 font-mono">
-                                                {new Date(game.timestamp * 1000).toLocaleDateString()}
-                                            </div>
-                                            <div className="text-xs text-gray-400 font-mono mb-1">
-                                                {new Date(game.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
-                                            <div className="flex items-center gap-1 text-[10px] font-bold text-muted uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
-                                                <span>{game.game_type === 'poker' ? 'Poker' : (game.game_type === 'tictactoe_plus' ? '9x9' : '3x3')}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Multiplayer Layout */}
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-muted uppercase tracking-wider">{players.length} Players</span>
-                                                {winner ? (
-                                                    <div className="flex items-center gap-1 text-xs text-secondary font-bold bg-secondary/10 px-2 py-0.5 rounded border border-secondary/20">
-                                                        <span>Winner:</span>
-                                                        <span className="truncate max-w-[150px]">{getModelName(winner)}</span>
-                                                    </div>
-                                                ) : !isError && (
-                                                    <div className="flex items-center gap-1 text-xs text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                                                        <span>Draw</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {players.slice(0, 4).map((p, i) => (
-                                                    <div key={i} className={`flex items-center gap-1.5 px-2 py-1 rounded bg-black/20 border ${p.toLowerCase() === winner?.toLowerCase() ? "border-secondary/40" : "border-white/5"}`}>
-                                                        <ModelIcon model={p} provider={getProvider(p)} size={14} />
-                                                        <span className={`text-xs ${p.toLowerCase() === winner?.toLowerCase() ? "text-secondary font-bold" : "text-gray-400"}`}>
-                                                            {getModelName(p) === "human" ? "Human" : getModelName(p)}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                                {players.length > 4 && (
-                                                    <div className="text-xs text-muted font-mono">+{players.length - 4}</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-6">
-                                        {/* Match Metrics Summary */}
-                                        {game.model_stats && (
-                                            <div className="flex items-center gap-4 text-[10px] font-mono opacity-60">
-                                                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded border border-white/5">
-                                                    <Coins className="w-3 h-3 text-amber-500" />
-                                                    <span>{Object.values(game.model_stats).reduce((a, b) => a + (b.tokens || 0), 0).toLocaleString()}</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {isError && (
-                                            <div className="bg-red-500/10 text-red-400 px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-2 border border-red-500/20">
-                                                <AlertTriangle className="w-3 h-3" /> ERROR
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
+                        if (game.winner_index !== undefined && game.winner_index !== null) {
+                            winnerIdx = game.winner_index;
+                        } else if (winner) {
+                            // Fallback for old records without index
+                            winnerIdx = players.findIndex(p => p.toLowerCase() === winner.toLowerCase());
                         }
 
-                        // Standard 1v1 View
-                        const isP1Winner = game.winner_index === 0 || (game.winner_index == null && game.winner_model_id === game.player1 && game.player1 !== game.player2);
-                        const isP2Winner = game.winner_index === 1 || (game.winner_index == null && game.winner_model_id === game.player2 && game.player1 !== game.player2);
-                        const isDraw = !isP1Winner && !isP2Winner && !isError;
+                        if (winnerIdx !== -1) {
+                            winnerColor = PLAYER_COLORS[winnerIdx % PLAYER_COLORS.length];
+                        }
 
                         return (
                             <div
@@ -211,48 +153,80 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                                         <div className="text-xs text-gray-400 font-mono mb-1">
                                             {new Date(game.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </div>
-                                        {gameTypeFilter === 'all' && (
-                                            <div className="text-[10px] font-bold text-muted uppercase tracking-wide bg-white/5 px-1.5 py-0.5 rounded border border-white/5 mt-1">
-                                                {game.game_type === 'poker' ? 'POKER' : (game.game_type === 'tictactoe_plus' ? '9x9' : '3x3')}
-                                            </div>
-                                        )}
+                                        <div className="flex items-center gap-1 text-[10px] font-bold text-muted uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+                                            <span>{GAME_BADGE_LABELS[game.game_type] || game.game_type.toUpperCase()}</span>
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-4">
-                                        <div className={`flex items-center gap-3 w-48 justify-end ${isP1Winner ? "text-secondary font-bold" : "text-gray-400"}`}>
-                                            <span className="truncate text-sm">{getModelName(game.player1) === "human" ? "Human" : getModelName(game.player1)}</span>
-                                            <ModelIcon model={game.player1} provider={getProvider(game.player1)} size={20} />
+                                    {/* Unified Layout */}
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-muted uppercase tracking-wider">{players.length} PLAYERS</span>
+                                            {winner ? (
+                                                <div
+                                                    className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border bg-black/40"
+                                                    style={{
+                                                        borderColor: `${winnerColor}40`,
+                                                        color: winnerColor
+                                                    }}
+                                                >
+                                                    <span>Winner:</span>
+                                                    <span className="truncate max-w-[150px]">{getModelName(winner)}</span>
+                                                </div>
+                                            ) : !isError && (
+                                                <div className="flex items-center gap-1 text-xs text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                                                    <span>Draw</span>
+                                                </div>
+                                            )}
                                         </div>
+                                        <div className="flex items-center gap-2">
+                                            {players.slice(0, 4).map((p, i) => {
+                                                // Robust winner check using Index if available
+                                                let isWinner = false;
+                                                if (winnerIdx !== -1) {
+                                                    isWinner = i === winnerIdx;
+                                                } else if (winner) {
+                                                    isWinner = p.toLowerCase() === winner.toLowerCase();
+                                                }
 
-                                        <div className={`font-mono text-muted opacity-40 text-[10px] px-2 flex flex-col items-center min-w-[40px]`}>
-                                            <span>VS</span>
-                                        </div>
+                                                const playerColor = PLAYER_COLORS[i % PLAYER_COLORS.length];
 
-                                        <div className={`flex items-center gap-3 w-48 ${isP2Winner ? "text-primary font-bold" : "text-gray-400"}`}>
-                                            <ModelIcon model={game.player2} provider={getProvider(game.player2)} size={20} />
-                                            <span className="truncate text-sm">{getModelName(game.player2) === "human" ? "Human" : getModelName(game.player2)}</span>
+                                                return (
+                                                    <div
+                                                        key={i}
+                                                        className={`flex items-center gap-1.5 px-2 py-1 rounded bg-black/20 border`}
+                                                        style={{
+                                                            borderColor: isWinner ? `${playerColor}60` : 'rgba(255,255,255,0.05)',
+                                                            color: isWinner ? playerColor : undefined
+                                                        }}
+                                                    >
+                                                        <ModelIcon model={p} provider={getProvider(p)} size={14} />
+                                                        <span className={`text-xs ${isWinner ? "font-bold" : "text-gray-400"}`}>
+                                                            {getModelName(p) === "human" ? "Human" : getModelName(p)}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            })}
+                                            {players.length > 4 && (
+                                                <div className="text-xs text-muted font-mono">+{players.length - 4}</div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-6">
                                     {/* Match Metrics Summary */}
-                                    <div className="flex items-center gap-4 text-[10px] font-mono opacity-60">
-                                        {isDraw && (
-                                            <div className="bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">
-                                                Draw
-                                            </div>
-                                        )}
-                                        {game.model_stats && (
+                                    {isError && (
+                                        <div className="bg-red-500/10 text-red-400 px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-2 border border-red-500/20">
+                                            <AlertTriangle className="w-3 h-3" /> ERROR
+                                        </div>
+                                    )}
+                                    {game.model_stats && (
+                                        <div className="flex items-center gap-4 text-[10px] font-mono opacity-60">
                                             <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded border border-white/5">
                                                 <Coins className="w-3 h-3 text-amber-500" />
                                                 <span>{Object.values(game.model_stats).reduce((a, b) => a + (b.tokens || 0), 0).toLocaleString()}</span>
                                             </div>
-                                        )}
-                                    </div>
-                                    {isError && (
-                                        <div className="bg-red-500/10 text-red-400 px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-2 border border-red-500/20">
-                                            <AlertTriangle className="w-3 h-3" /> ERROR
                                         </div>
                                     )}
                                 </div>
