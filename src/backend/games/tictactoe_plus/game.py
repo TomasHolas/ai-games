@@ -11,7 +11,8 @@ class TicTacToePlus(BaseGame):
         self.winner = None
 
     def get_board_state(self) -> List[List[str]]:
-        return self.board
+        # Return a copy to prevent mutation of history logs
+        return [row[:] for row in self.board]
 
     def _render_board_text(self) -> str:
         lines = ["Current state (9x9 grid, coordinates 0-8):"]

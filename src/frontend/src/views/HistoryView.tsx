@@ -112,8 +112,6 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
             ) : (
                 <div className="grid gap-4">
                     {filtered.map((game) => {
-                        const gameDef = GAME_TYPES.find(g => g.id === game.game_type);
-                        const GameIcon = gameDef?.icon || Grid3X3;
 
                         const isMultiplayer = game.game_type === 'poker' || (game.players_list && game.players_list.length > 2);
                         const isError = !!game.error_model_id;
@@ -138,8 +136,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                                                 {new Date(game.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                             <div className="flex items-center gap-1 text-[10px] font-bold text-muted uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
-                                                <GameIcon className="w-3 h-3" />
-                                                <span>{gameDef?.label || game.game_type}</span>
+                                                <span>{game.game_type === 'poker' ? 'Poker' : (game.game_type === 'tictactoe_plus' ? '9x9' : '3x3')}</span>
                                             </div>
                                         </div>
 
@@ -147,10 +144,14 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                                         <div className="flex flex-col gap-2">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs font-bold text-muted uppercase tracking-wider">{players.length} Players</span>
-                                                {winner && (
+                                                {winner ? (
                                                     <div className="flex items-center gap-1 text-xs text-secondary font-bold bg-secondary/10 px-2 py-0.5 rounded border border-secondary/20">
                                                         <span>Winner:</span>
                                                         <span className="truncate max-w-[150px]">{getModelName(winner)}</span>
+                                                    </div>
+                                                ) : !isError && (
+                                                    <div className="flex items-center gap-1 text-xs text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                                        <span>Draw</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -191,10 +192,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                         }
 
                         // Standard 1v1 View
-                        const p1Name = getModelName(game.player1);
-                        const p2Name = getModelName(game.player2);
                         const isP1Winner = game.winner_index === 0 || (game.winner_index == null && game.winner_model_id === game.player1 && game.player1 !== game.player2);
                         const isP2Winner = game.winner_index === 1 || (game.winner_index == null && game.winner_model_id === game.player2 && game.player1 !== game.player2);
+                        const isDraw = !isP1Winner && !isP2Winner && !isError;
 
                         return (
                             <div
@@ -212,39 +212,44 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                                             {new Date(game.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </div>
                                         {gameTypeFilter === 'all' && (
-                                            <div className="text-center" title={gameDef?.label}>
-                                                <GameIcon className="w-4 h-4 text-muted opacity-50 group-hover:opacity-100 transition-opacity" />
+                                            <div className="text-[10px] font-bold text-muted uppercase tracking-wide bg-white/5 px-1.5 py-0.5 rounded border border-white/5 mt-1">
+                                                {game.game_type === 'poker' ? 'POKER' : (game.game_type === 'tictactoe_plus' ? '9x9' : '3x3')}
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <div className={`flex items-center gap-3 w-48 justify-end ${isP1Winner ? "text-green-400 font-bold" : "text-gray-400"}`}>
-                                            <span className="truncate text-sm">{p1Name}</span>
+                                        <div className={`flex items-center gap-3 w-48 justify-end ${isP1Winner ? "text-secondary font-bold" : "text-gray-400"}`}>
+                                            <span className="truncate text-sm">{getModelName(game.player1) === "human" ? "Human" : getModelName(game.player1)}</span>
                                             <ModelIcon model={game.player1} provider={getProvider(game.player1)} size={20} />
                                         </div>
 
-                                        <div className="font-mono text-muted text-xs px-2 flex flex-col items-center">
+                                        <div className={`font-mono text-muted opacity-40 text-[10px] px-2 flex flex-col items-center min-w-[40px]`}>
                                             <span>VS</span>
                                         </div>
 
-                                        <div className={`flex items-center gap-3 w-48 ${isP2Winner ? "text-green-400 font-bold" : "text-gray-400"}`}>
+                                        <div className={`flex items-center gap-3 w-48 ${isP2Winner ? "text-primary font-bold" : "text-gray-400"}`}>
                                             <ModelIcon model={game.player2} provider={getProvider(game.player2)} size={20} />
-                                            <span className="truncate text-sm">{p2Name}</span>
+                                            <span className="truncate text-sm">{getModelName(game.player2) === "human" ? "Human" : getModelName(game.player2)}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-6">
                                     {/* Match Metrics Summary */}
-                                    {game.model_stats && (
-                                        <div className="flex items-center gap-4 text-[10px] font-mono opacity-60">
+                                    <div className="flex items-center gap-4 text-[10px] font-mono opacity-60">
+                                        {isDraw && (
+                                            <div className="bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">
+                                                Draw
+                                            </div>
+                                        )}
+                                        {game.model_stats && (
                                             <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded border border-white/5">
                                                 <Coins className="w-3 h-3 text-amber-500" />
                                                 <span>{Object.values(game.model_stats).reduce((a, b) => a + (b.tokens || 0), 0).toLocaleString()}</span>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                     {isError && (
                                         <div className="bg-red-500/10 text-red-400 px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-2 border border-red-500/20">
                                             <AlertTriangle className="w-3 h-3" /> ERROR

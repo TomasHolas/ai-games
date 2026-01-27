@@ -38,9 +38,11 @@ export interface LogEntry {
     thinking?: string;
     system_prompt?: string;
     user_prompt?: string;
+    winner?: string | null;
+    winner_index?: number | null;
     current_symbol?: string;
     player_index?: number;
-    board?: string[][];
+    board?: any;
     folded_cards?: string[];
     hand_result?: any;
     is_hand_summary?: boolean;
