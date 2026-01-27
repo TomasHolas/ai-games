@@ -12,6 +12,8 @@ interface GameArenaProps {
         isFolded?: boolean; // Poker specific
         isOut?: boolean; // Poker specific
         isDealer?: boolean; // Poker specific
+        isSmallBlind?: boolean; // Poker specific
+        isBigBlind?: boolean; // Poker specific
         extraContent?: React.ReactNode; // Cards, Chips, etc.
     }[];
     children: React.ReactNode; // The central game board
@@ -91,8 +93,18 @@ export const GameArena: React.FC<GameArenaProps> = ({ players, children, fluid =
                         />
 
                         {player.isDealer && (
-                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-white text-black font-bold rounded-full flex items-center justify-center text-xs border-2 border-gray-400 shadow-sm z-30">
+                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-white text-black font-bold rounded-full flex items-center justify-center text-xs border-2 border-gray-400 shadow-sm z-30" title="Dealer">
                                 D
+                            </div>
+                        )}
+                        {player.isSmallBlind && (
+                            <div className="absolute -top-2 -left-2 w-6 h-6 bg-blue-500 text-white font-bold rounded-full flex items-center justify-center text-[10px] border-2 border-blue-300 shadow-sm z-30" title="Small Blind">
+                                SB
+                            </div>
+                        )}
+                        {player.isBigBlind && (
+                            <div className="absolute -top-2 -left-2 w-6 h-6 bg-purple-500 text-white font-bold rounded-full flex items-center justify-center text-[10px] border-2 border-purple-300 shadow-sm z-30" title="Big Blind">
+                                BB
                             </div>
                         )}
                     </div>

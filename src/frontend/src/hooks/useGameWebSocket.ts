@@ -39,6 +39,7 @@ export function useGameWebSocket({
     const [isConnected, setIsConnected] = useState(false);
 
     const wsRef = useRef<WebSocket | null>(null);
+    const userTriggeredFinish = useRef(false);
 
     const startGame = useCallback(() => {
         // Reset state
@@ -46,6 +47,7 @@ export function useGameWebSocket({
         setMetricsHistory([]);
         setGameState(null);
         setInvalidMoves({ p1: 0, p2: 0 });
+        userTriggeredFinish.current = false;
 
         const newMatchId = `match-${Date.now()}`;
         setMatchId(newMatchId);
@@ -144,6 +146,17 @@ export function useGameWebSocket({
                         timestamp: new Date().toLocaleTimeString(),
                         board: data.board
                     }]);
+
+                    // Automatically return to menu after a short delay to let user see "Winner" message
+                    // IF user explicitly finished (poker), exit immediately
+                    const delay = userTriggeredFinish.current ? 0 : 2000;
+
+                    setTimeout(() => {
+                        // Close socket to prevent further updates
+                        if (wsRef.current) wsRef.current.close();
+                        onGameEnd?.();
+                    }, delay);
+
                 } else {
                     // Generic system message (Summary, Separator, etc)
                     setLogs(prev => [...prev, {
@@ -182,6 +195,10 @@ export function useGameWebSocket({
     }, [onGameEnd]);
 
     const makeHumanMove = useCallback((move: string) => {
+        if (move === "finish") {
+            userTriggeredFinish.current = true;
+        }
+
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify({
                 type: 'human_move',

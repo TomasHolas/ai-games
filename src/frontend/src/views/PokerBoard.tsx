@@ -131,9 +131,21 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
     }
 
     // Map to GameArena players format
+    // Helper to match backend rotation logic
+    const getNextActiveIndex = (startIdx: number) => {
+        for (let i = 1; i <= activePlayers.length; i++) {
+            const idx = (startIdx + i) % activePlayers.length;
+            if (activePlayers[idx].status === 'active' || activePlayers[idx].status === 'allin') return idx;
+        }
+        return startIdx;
+    };
+
+    const sbIdx = getNextActiveIndex(dealer_idx);
+    const bbIdx = getNextActiveIndex(sbIdx);
+
     const arenaPlayers = activePlayers.map((p, i) => {
         const isFolded = p.status === 'folded';
-        const isOut = p.status === 'out';
+        const isOut = p.status.includes('out') || p.status.includes('eliminated'); // Handle eliminated
         const playerColor = PLAYER_COLORS[i % PLAYER_COLORS.length];
 
         // Resolve human-readable model name
@@ -148,6 +160,8 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
             isFolded: isFolded,
             isOut: isOut,
             isDealer: i === dealer_idx,
+            isSmallBlind: i === sbIdx,
+            isBigBlind: i === bbIdx,
             extraContent: (
                 <>
                     {/* Cards with Bet Chip */}
@@ -169,7 +183,7 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
                             </div>
 
                             {/* Bet Chip - Shows current round bet only */}
-                            {p.bet > 0 && !isFolded && (
+                            {p.bet > 0 && (
                                 <div className="flex flex-col items-center gap-0.5">
                                     <div
                                         className="w-5 h-5 rounded-full border-2 shadow-lg"
@@ -195,6 +209,13 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
                     {!isOut && (
                         <div className={`bg-black/80 px-3 py-1 rounded-full border border-white/10 text-xs font-mono font-bold ${isFolded ? 'text-gray-500' : 'text-emerald-400'}`}>
                             ${p.chips}
+                        </div>
+                    )}
+
+                    {/* Hand Rank Badge (e.g. "Two Pair") */}
+                    {p.hand_rank && !isFolded && !isOut && (
+                        <div className="mt-1 px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/30 rounded text-[10px] font-bold uppercase text-yellow-500 tracking-wider shadow-sm">
+                            {p.hand_rank[1]}
                         </div>
                     )}
                 </>
@@ -385,6 +406,13 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
                                 className="px-10 py-4 bg-white hover:bg-gray-200 text-black font-black text-sm uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95"
                             >
                                 <Play className="w-5 h-5 fill-current" /> Next Hand
+                            </button>
+
+                            <button
+                                onClick={() => makeHumanMove("finish")}
+                                className="px-6 py-4 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 font-bold text-sm uppercase tracking-wider rounded-xl border border-red-600/30 transition-all active:scale-95 flex items-center gap-2"
+                            >
+                                <Trophy className="w-5 h-5" /> End Game
                             </button>
 
                             <button

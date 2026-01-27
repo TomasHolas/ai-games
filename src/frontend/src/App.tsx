@@ -110,6 +110,7 @@ function App() {
     }, [pendingReplayId, historyData]);
 
     // Sync URL hash with view state
+    // Sync URL hash with view state
     useEffect(() => {
         if (isReviewing && historyData) {
             window.location.hash = `replay/${historyData.match_id}`;
@@ -161,7 +162,17 @@ function App() {
             // Only handle if we are NOT in history mode
             if (!isReviewing) {
                 setInGame(false);
-                setView('games');
+                setHistoryData(null);
+
+                // For Poker, return to Catalog (Games) as requested by user
+                // For others (TTT), go to History to see results
+                if (gameType === 'poker') {
+                    setView('games');
+                    window.location.hash = 'games';
+                } else {
+                    setView('history');
+                    window.location.hash = 'history';
+                }
             }
         }
     });
@@ -234,6 +245,8 @@ function App() {
     const matchViewProps = isReviewing && historyData ? {
         matchId: historyData.match_id,
         gameState: filteredHistoryLog[filteredHistoryLog.length - 1], // Last state
+        winner: filteredHistoryLog[filteredHistoryLog.length - 1]?.winner,
+        winner_index: historyData.winner_index,
         logs: filteredHistoryLog.map((l: any, idx: number) => ({
             turn: idx, // Use index as turn for cleaner step counts
             player: l.current_player,
@@ -247,7 +260,9 @@ function App() {
             user_prompt: l.user_prompt,
             current_symbol: l.current_symbol,
             player_index: l.current_player_idx,
-            board: l.board
+            board: l.board,
+            winner: l.winner,
+            winner_index: l.winner_index !== undefined ? l.winner_index : (idx === filteredHistoryLog.length - 1 ? historyData.winner_index : null)
         })),
         metricsHistory: filteredHistoryLog.map((l: any, idx: number) => ({
             turn: idx,

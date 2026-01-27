@@ -20,8 +20,6 @@ export const GameStatusOverlay: React.FC<GameStatusOverlayProps> = ({
     if (!gameState) return null;
 
     // POKER EXCEPTION: PokerBoard handles its own overlay for hand results.
-    // To avoid visual clash (e.g. Invalid Move banner over Hand Winner), we hide this overlay
-    // when a poker hand result is active or a hand summary is being shown.
     const pokerState = gameState.board as unknown as { last_hand_result: any };
     const isHandOver = (gameState as any).is_hand_summary || (gameState as any).hand_result || pokerState?.last_hand_result;
 
@@ -30,16 +28,27 @@ export const GameStatusOverlay: React.FC<GameStatusOverlayProps> = ({
     }
 
     const { game_over, winner, message, is_invalid, current_symbol, winner_index } = gameState;
-    // Use winner_index from backend for reliable color matching (0 = P1/secondary, 1 = P2/primary)
-    const isP1Winner = winner_index === 0 || (winner_index == null && (winner === "X" || winner === p1Name));
 
-    // Status Pill (Turn Indicator) - Only if game is active
-    // And for poker, only if not showing hand result overlay
-    // (pokerState and isPokerHandOver are already defined above)
+    const normalizedWinner = winner?.toLowerCase();
+    const normalizedP1 = p1Name?.toLowerCase();
+    const normalizedP2 = p2Name?.toLowerCase();
+    const normalizedMsg = message?.toLowerCase();
+
+    const isP1Winner = winner_index === 0 || (winner_index == null && (
+        normalizedWinner === "x" ||
+        normalizedWinner === normalizedP1 ||
+        (isReviewing && (normalizedWinner === "winner: x" || normalizedMsg?.includes("winner: " + normalizedP1)))
+    ));
+
+    const isP2Winner = winner_index === 1 || (winner_index == null && (
+        normalizedWinner === "o" ||
+        normalizedWinner === normalizedP2 ||
+        (isReviewing && (normalizedWinner === "winner: o" || normalizedMsg?.includes("winner: " + normalizedP2)))
+    ));
+
     const isPokerHandOver = gameType === 'poker' && pokerState?.last_hand_result;
 
     if (!game_over && !isPokerHandOver) {
-        // Suppress HAND OVER message as it's redundant with the main result overlay
         if (message?.includes('HAND OVER') || message === 'New hand started') return null;
 
         const isSystem = message?.includes('---') ||
@@ -49,39 +58,15 @@ export const GameStatusOverlay: React.FC<GameStatusOverlayProps> = ({
             ['FLOP', 'TURN', 'RIVER', 'PREFLOP', 'SHOWDOWN'].some(s => message?.toUpperCase().includes(s));
         const isHumanTurn = message?.toLowerCase().includes("your turn");
 
-        // Get current player index for poker color
         const currentPlayerIdx = (gameState.board as any)?.current_player_idx ?? 0;
         const playerColor = PLAYER_COLORS[currentPlayerIdx % PLAYER_COLORS.length];
 
-        // Extract player name from message (format: "PlayerName is thinking...")
         const thinkingMatch = message?.match(/^(.+?) is thinking/i);
         const thinkingPlayerName = thinkingMatch ? thinkingMatch[1] : null;
 
-        // Strip decorations from system messages (handles --- RIVER --- or just RIVER)
-        const cleanMessage = isSystem ? message?.replace(/[-_]/g, '').trim() : message;
-
         return (
             <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none w-full">
-                {isSystem ? (
-                    <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700">
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className="h-px w-20 bg-gradient-to-r from-transparent to-yellow-500/30" />
-                            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-yellow-500/80 drop-shadow-sm">
-                                Stage Announcement
-                            </div>
-                            <div className="h-px w-20 bg-gradient-to-l from-transparent to-yellow-500/30" />
-                        </div>
-                        {cleanMessage !== "Poker Game started" && cleanMessage !== "New hand started" && (
-                            <div className="text-6xl lg:text-9xl font-black tracking-tighter text-white drop-shadow-2xl text-center px-4 uppercase"
-                                style={{
-                                    filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.8))',
-                                    textShadow: '0 0 40px rgba(234,179,8,0.2)'
-                                }}>
-                                {cleanMessage}
-                            </div>
-                        )}
-                    </div>
-                ) : (
+                {isSystem ? null : (
                     <div className={`
                         mx-auto w-fit flex items-center gap-2 rounded-full border shadow-xl backdrop-blur-md transition-all duration-300
                         ${isHumanTurn
@@ -124,15 +109,10 @@ export const GameStatusOverlay: React.FC<GameStatusOverlayProps> = ({
     }
 
     // GAME OVER - Minimalist Overlay
-    // We split into top (result) and bottom (controls) to keep board visible
-
     return (
         <div className="absolute inset-0 z-40 flex flex-col justify-between p-8 pointer-events-none animate-in fade-in duration-500">
-
             {/* TOP: Result Text */}
             <div className="flex flex-col items-center mt-6 pointer-events-auto gap-4">
-
-                {/* Next Match Info - Top Center */}
                 {!is_invalid && (
                     <div className="text-[10px] font-mono uppercase text-gray-400 tracking-widest bg-black/60 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-sm">
                         Next: <span className="text-secondary font-bold">{p1Name}</span> vs <span className="text-primary font-bold">{p2Name}</span>
@@ -145,7 +125,7 @@ export const GameStatusOverlay: React.FC<GameStatusOverlayProps> = ({
                         <span className="text-3xl font-black uppercase tracking-widest">Terminated</span>
                         <span className="text-sm opacity-90 font-mono bg-black/40 px-3 py-1 rounded">Invalid Move Detected</span>
                     </div>
-                ) : winner ? (
+                ) : (isP1Winner || isP2Winner) ? (
                     <div className="flex flex-col items-center drop-shadow-2xl">
                         <div className="text-xs font-bold text-muted uppercase tracking-[0.5em] mb-2 bg-black/40 px-4 py-1 rounded-full border border-white/5">Winner</div>
                         <div className={`text-6xl lg:text-8xl font-black tracking-tighter ${isP1Winner ? 'text-secondary' : 'text-primary'}`}
