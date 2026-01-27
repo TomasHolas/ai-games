@@ -50,29 +50,39 @@ class PokerMatch(Match):
         while not self.game.is_game_over() and self.is_running:
             # Handle manual wait between hands (End Screen pause)
             if hasattr(self.game, "stage") and self.game.stage == "HAND_OVER":
+                # Non-blocking check for commands
                 try:
-                    # Non-blocking wait loop to allow checking is_running
-                    try:
-                        cmd = self.command_queue.get(timeout=0.5)
-                        if cmd.strip() == "next":
-                            if hasattr(self.game, "start_new_hand"):
-                                self.game.start_new_hand()
-                                # Re-sync player index after new hand generic setup
-                                self.current_player_idx = self.game.current_player_idx
+                    cmd = self.command_queue.get(timeout=0.5)
+                    logger.info(f"PokerMatch HAND_OVER processing command: '{cmd}'")
 
-                                if on_update:
-                                    # Send system message to clear end-screen overlay
-                                    self._notify(
-                                        on_update,
-                                        turn_count,
-                                        "New hand started",
-                                        active_player_override=SystemPlayer(),
-                                    )
-                                continue
-                    except queue.Empty:
-                        pass
+                    if cmd.strip() == "next":
+                        if hasattr(self.game, "start_new_hand"):
+                            self.game.start_new_hand()
+                            # Re-sync player index after new hand generic setup
+                            self.current_player_idx = self.game.current_player_idx
+
+                            if on_update:
+                                # Send system message to clear end-screen overlay
+                                self._notify(
+                                    on_update,
+                                    turn_count,
+                                    "New hand started",
+                                    active_player_override=SystemPlayer(),
+                                )
+                            continue
+
+                    elif cmd.strip() == "finish":
+                        logger.info("FINISH command received. Breaking game loop.")
+                        self.is_running = False
+                        self.game.force_end = True
+                        break # Breaks main loop
+                
+                except queue.Empty:
+                    pass
                 except Exception as e:
-                    logger.error(f"Error processing command: {e}")
+                    logger.error(f"Error processing command in HAND_OVER: {e}")
+                
+                # If we are here, we are still waiting in HAND_OVER
                 continue
 
             # Capture stage at start of turn to detect changes later
@@ -136,12 +146,31 @@ class PokerMatch(Match):
                 metrics = response.metrics
 
                 # Fallback: If no structured thinking found, treat the whole content as thinking
-                # This ensures the "Thinking" badge appears if the model outputted text analysis
                 if (
                     not response.thinking
                     and len(response.content.strip()) > len(move_raw.strip()) + 10
                 ):
                     response.thinking = response.content
+
+                # CHECK FOR API ERRORS (Rate Limits)
+                if "429" in response.content or "RESOURCE_EXHAUSTED" in response.content:
+                    logger.warning(f"Player {current_player.name} hit rate limit. Eliminating from game.")
+                    
+                    self.game.eliminate_player(self.current_player_idx)
+                    
+                    if on_update:
+                        self._notify(
+                            on_update,
+                            turn_count,
+                            f"Player {current_player.name} left the table (Connection Lost).",
+                            metrics=metrics,
+                            active_player_override=current_player,
+                            error_by=current_player.name
+                        )
+                    
+                    # Log state change
+                    turn_count += 1
+                    continue # Skip normal move processing
 
                 # 3. Apply move
                 # Sync game engine's current player pointer to match the loop's pointer

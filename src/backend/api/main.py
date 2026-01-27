@@ -28,6 +28,7 @@ from games.poker.match import PokerMatch
 from games.poker.prompt import PROMPT_POKER
 from core.llm.human import HumanLLM
 from config.models import get_enabled_models, is_gemini_model
+from core.constants import PLAYER_COLOR_NAMES
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
@@ -179,7 +180,8 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
             for i, pid in enumerate(player_ids):
                 # We use simple naming, could use P1, P2 etc.
                 if pid == "human":
-                    name = f"Human {i+1}"
+                    color_name = PLAYER_COLOR_NAMES[i % len(PLAYER_COLOR_NAMES)]
+                    name = f"Human {color_name}"
                 else:
                     name = pid
 
@@ -243,10 +245,11 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
 
         # Get the running event loop for thread-safe callbacks
         loop = asyncio.get_running_loop()
+        import copy
 
         def on_update(state_data: dict):
             """Callback for game state updates."""
-            nonlocal final_winner, final_error_by
+            nonlocal final_winner, final_winner_idx, final_error_by, final_error_by_idx
 
             # Detect invalid moves
             is_invalid = "Invalid move" in str(state_data.get("message", ""))
@@ -266,10 +269,12 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
 
             if state_data.get("game_over"):
                 final_winner = state_data.get("winner")
+                final_winner_idx = state_data.get("winner_index")
                 final_error_by = state_data.get("error_by")
+                final_error_by_idx = state_data.get("error_index")
 
-            # Append to log
-            game_log.append(state_data)
+            # Append to log - USE DEEPCOPY to snapshot the board state
+            game_log.append(copy.deepcopy(state_data))
 
             # Send to frontend (thread-safe)
             asyncio.run_coroutine_threadsafe(websocket.send_json(state_data), loop)
@@ -290,8 +295,8 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
                     move = msg.get("move")
                     logger.info(f"Received human move: {move}")
 
-                    # Fix for Poker "next" command
-                    if move == "next" and hasattr(match_instance, "process_command"):
+                    # Fix for Poker "next" and "finish" commands
+                    if move in ["next", "finish"] and hasattr(match_instance, "process_command"):
                         match_instance.process_command(move)
                         continue
 
@@ -307,7 +312,15 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
                 logger.error(f"WebSocket receive error: {e}")
                 break
 
-        await websocket.send_json({"message": "Session ended"})
+        try:
+            await websocket.send_json({"message": "Session ended"})
+        except Exception:
+            pass  # Client already disconnected
+
+        # Update final winner from match instance state if not set
+        if not final_winner and match_instance:
+             final_winner = match_instance.game.get_winner()
+             final_winner_idx = match_instance.game.get_winner_idx()
 
         # Save statistics
         try:

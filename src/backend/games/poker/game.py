@@ -87,7 +87,7 @@ class PokerGame(BaseGame):
 
         # Reset player round states
         for p in self.players:
-            if p["chips"] > 0:
+            if p["chips"] > 0 and not p.get("is_eliminated"):
                 p["status"] = "active"
                 p["hand"] = self.deck.deal(2)
                 p["current_round_bet"] = 0
@@ -99,21 +99,56 @@ class PokerGame(BaseGame):
                 p["status"] = "out"
                 p["hand"] = []
 
-        # Blinds
-        sb_idx = (self.dealer_idx + 1) % len(self.players)
-        bb_idx = (self.dealer_idx + 2) % len(self.players)
+        # Helper to find next active player
+        def get_next_active(start_idx):
+            for i in range(1, len(self.players) + 1):
+                idx = (start_idx + i) % len(self.players)
+                if self.players[idx]["status"] == "active":
+                    return idx
+            return start_idx
+
+        # Calculate Blinds Indices (skipping out/eliminated players)
+        # Assuming at least 2 active players
+        sb_idx = get_next_active(self.dealer_idx)
+        bb_idx = get_next_active(sb_idx)
+
+        print(f"[GAME] Posting Blinds: Dealer={self.dealer_idx}, SB={sb_idx}, BB={bb_idx}")
 
         self._post_blind(sb_idx, self.small_blind)
         self._post_blind(bb_idx, self.big_blind)
 
         # Action starts after BB (UTG)
-        # Find first active player starting from dealer + 3
-        start_offset = (self.dealer_idx + 3) % len(self.players)
+        start_offset = get_next_active(bb_idx) # Actually UTG is the one AFTER BB
+        
+        # Find first active player starting from UTG
         for i in range(len(self.players)):
             idx = (start_offset + i) % len(self.players)
             if self.players[idx]["status"] == "active":
                 self.current_player_idx = idx
                 break
+
+        print(f"[GAME] Hand Started. Current Player: {self.current_player_idx} (UTG)")
+        self.last_raiser_idx = bb_idx
+        self.min_raise = self.big_blind
+
+    def eliminate_player(self, player_idx: int):
+        """
+        Permanently remove a player from the game (e.g. due to API rate limits).
+        Treats them as folded for the current hand and marks them to stay 'out' in future hands.
+        """
+        p = self.players[player_idx]
+        p["status"] = "folded"
+        p["is_eliminated"] = True
+        
+        # Advance to next active player to keep game moving
+        # Need to be careful not to create infinite loop if everyone eliminated
+        for i in range(1, len(self.players) + 1):
+            next_idx = (player_idx + i) % len(self.players)
+            if self.players[next_idx]["status"] == "active":
+                self.current_player_idx = next_idx
+                break
+                
+        self._check_round_completion()
 
         self.last_raiser_idx = bb_idx
         self.min_raise = self.big_blind
@@ -581,15 +616,22 @@ class PokerGame(BaseGame):
         return len(active) <= 1
 
     def get_winner(self) -> str | None:
-        if self.is_game_over():
-            active = [p for p in self.players if p["chips"] > 0]
-            return active[0]["name"] if active else None
+        if self.is_game_over() or getattr(self, "force_end", False):
+            # Return player with most chips
+            sorted_players = sorted(self.players, key=lambda p: p["chips"], reverse=True)
+            return sorted_players[0]["name"] if sorted_players else None
         return None
 
     def get_winner_idx(self) -> int | None:
         """Returns the index of the winning player."""
-        if self.is_game_over():
+        if self.is_game_over() or getattr(self, "force_end", False):
+            # Sort to find winner, then find original index
+            sorted_players = sorted(self.players, key=lambda p: p["chips"], reverse=True)
+            if not sorted_players:
+                return None
+            winner_name = sorted_players[0]["name"]
+            
             for i, p in enumerate(self.players):
-                if p["chips"] > 0:
+                if p["name"] == winner_name:
                     return i
         return None
