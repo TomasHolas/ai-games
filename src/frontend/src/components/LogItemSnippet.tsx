@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Bug, Hash } from 'lucide-react';
+import { Clock, Bug, Coins } from 'lucide-react';
 import type { LogEntry, ModelConfig } from '../types';
 import { DebugModal } from './DebugModal';
 import { ModelIcon } from './ModelIcon';
@@ -177,7 +177,7 @@ export const LogItemSnippet: React.FC<LogItemSnippetProps> = ({ log, models }) =
                                             <Clock className="w-2.5 h-2.5" /> {(log.metrics.latency_ms / 1000).toFixed(1)}s
                                         </div>
                                         <div className="flex items-center gap-1 text-[9px] font-mono bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
-                                            <Hash className="w-2.5 h-2.5" /> {log.metrics.total_tokens}
+                                            <Coins className="w-2.5 h-2.5" /> {log.metrics.total_tokens}
                                         </div>
                                     </div>
                                 )}

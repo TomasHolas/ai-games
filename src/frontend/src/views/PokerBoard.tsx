@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { GameState, ModelConfig } from '../types';
 import { GameArena } from '../components/GameArena';
 import { PokerTable } from '../components/PokerTable';
 import { PlayingCard } from '../components/PlayingCard';
 import { PLAYER_COLORS } from '../config';
-import { Play, ArrowLeft, Trophy, Info, X, Zap, ZapOff } from 'lucide-react';
+import { Play, ArrowLeft, Trophy, Info, X } from 'lucide-react';
 
 const RANK_NAMES: Record<number, string> = {
     10: "Royal Flush", 9: "Straight Flush", 8: "Four of a Kind", 7: "Full House",
@@ -66,7 +66,6 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
     const [raiseAmount, setRaiseAmount] = useState<string>('');
     const [showLeaderboard, setShowLeaderboard] = useState(false);
     const [showRankings, setShowRankings] = useState(false);
-    const [autoNext, setAutoNext] = useState(false);
 
     // Parse gameState if it's not null.
     const pokerState = gameState?.board as unknown as PokerState;
@@ -216,27 +215,19 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
         setRaiseAmount('');
     };
 
-    // Auto-Next Hand Logic
-    useEffect(() => {
-        let timer: any;
-        if (lastHandResult && autoNext) {
-            timer = setTimeout(() => {
-                makeHumanMove("next");
-            }, 3000); // 3 second delay
-        }
-        return () => clearTimeout(timer);
-    }, [lastHandResult, autoNext, makeHumanMove]);
 
     return (
         <div className="flex flex-col h-full relative">
-            {/* LEADERBOARD TOGGLE */}
+            {/* TOP RIGHT CONTROLS */}
             <div className="absolute top-6 right-6 z-[60] flex flex-col items-end gap-2">
-                <button
-                    onClick={() => setShowLeaderboard(!showLeaderboard)}
-                    className={`p-3 rounded-xl border transition-all active:scale-95 shadow-xl ${showLeaderboard ? 'bg-white text-black border-white' : 'bg-black/60 text-yellow-500 border-white/10 hover:bg-black/80'}`}
-                >
-                    <Trophy className="w-5 h-5" />
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowLeaderboard(!showLeaderboard)}
+                        className={`p-3 rounded-xl border transition-all active:scale-95 shadow-xl ${showLeaderboard ? 'bg-white text-black border-white' : 'bg-black/60 text-yellow-500 border-white/10 hover:bg-black/80'}`}
+                    >
+                        <Trophy className="w-5 h-5" />
+                    </button>
+                </div>
 
                 {showLeaderboard && (
                     <div className="bg-black/80 backdrop-blur-xl border border-white/10 p-4 rounded-2xl w-64 shadow-2xl animate-in slide-in-from-top-2">
@@ -387,15 +378,6 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
 
                     <div className="flex flex-col items-center gap-4 mb-20 pointer-events-auto">
                         <div className="flex gap-3 bg-black/90 p-3 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl ring-1 ring-white/5">
-                            <button
-                                onClick={() => setAutoNext(!autoNext)}
-                                title={autoNext ? "Auto-Next ON" : "Auto-Next OFF"}
-                                className={`px-4 py-4 rounded-xl border transition-all active:scale-95 flex items-center gap-2 ${autoNext ? 'bg-amber-500/20 border-amber-500 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-[#2a2d36] border-gray-700 text-gray-500 hover:text-gray-300'}`}
-                            >
-                                {autoNext ? <Zap className="w-5 h-5 fill-current" /> : <ZapOff className="w-5 h-5" />}
-                                <span className="text-[10px] font-black uppercase tracking-tighter">Auto</span>
-                            </button>
-
                             <button
                                 onClick={() => makeHumanMove("next")}
                                 className="px-10 py-4 bg-white hover:bg-gray-200 text-black font-black text-sm uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95"

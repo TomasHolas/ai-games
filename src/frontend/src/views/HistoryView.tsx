@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { History, Search, AlertTriangle, Grid3X3, Gamepad2 } from 'lucide-react';
+import { History, Search, AlertTriangle, Grid3X3, Gamepad2, Coins } from 'lucide-react';
 import { ModelIcon } from '../components';
 import { API_ENDPOINTS } from '../config';
 import type { ModelConfig } from '../types';
@@ -15,6 +15,7 @@ interface HistoryRecord {
     winner_index?: number | null;
     error_model_id?: string;
     error_index?: number | null;
+    model_stats?: Record<string, { latency_sum: number, tokens: number, invalid_moves: number }>;
 }
 
 interface HistoryViewProps {
@@ -170,6 +171,15 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                                     </div>
 
                                     <div className="flex items-center gap-6">
+                                        {/* Match Metrics Summary */}
+                                        {game.model_stats && (
+                                            <div className="flex items-center gap-4 text-[10px] font-mono opacity-60">
+                                                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded border border-white/5">
+                                                    <Coins className="w-3 h-3 text-amber-500" />
+                                                    <span>{Object.values(game.model_stats).reduce((a, b) => a + (b.tokens || 0), 0).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        )}
                                         {isError && (
                                             <div className="bg-red-500/10 text-red-400 px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-2 border border-red-500/20">
                                                 <AlertTriangle className="w-3 h-3" /> ERROR
@@ -226,6 +236,15 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                                 </div>
 
                                 <div className="flex items-center gap-6">
+                                    {/* Match Metrics Summary */}
+                                    {game.model_stats && (
+                                        <div className="flex items-center gap-4 text-[10px] font-mono opacity-60">
+                                            <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded border border-white/5">
+                                                <Coins className="w-3 h-3 text-amber-500" />
+                                                <span>{Object.values(game.model_stats).reduce((a, b) => a + (b.tokens || 0), 0).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                     {isError && (
                                         <div className="bg-red-500/10 text-red-400 px-3 py-1 rounded text-xs font-bold font-mono flex items-center gap-2 border border-red-500/20">
                                             <AlertTriangle className="w-3 h-3" /> ERROR

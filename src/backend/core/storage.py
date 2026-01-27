@@ -129,6 +129,7 @@ class StatsManager:
                             "error_model_id": data.get("error_model_id"),
                             "error_index": data.get("error_index"),
                             "players_list": data.get("players_list"),
+                            "model_stats": data.get("model_stats", {}),
                         }
                     )
             except Exception:

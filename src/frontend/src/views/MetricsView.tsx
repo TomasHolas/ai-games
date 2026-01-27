@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Shield, LayoutGrid, Cpu, Grid3X3, Gamepad2 } from 'lucide-react';
+import { Shield, LayoutGrid, Cpu, Grid3X3, Gamepad2, Coins } from 'lucide-react';
 import { ModelIcon } from '../components';
 import { API_ENDPOINTS } from '../config';
 import type { ModelStats, ModelConfig } from '../types';
@@ -172,6 +172,10 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
                             <th className="p-4 text-right">Starts</th>
                             <th className="p-4 text-right">Win Rate</th>
                             <th className="p-4 text-right cursor-pointer text-primary">Avg Latency (ms)</th>
+                            <th className="p-4 text-right flex items-center justify-end gap-1 mt-3">
+                                <Coins className="w-3 h-3" />
+                                <span>Tokens</span>
+                            </th>
                             <th className="p-4 text-center">Inv. Moves</th>
                             <th className="p-4 text-center text-red-400">Errors</th>
                         </tr>
@@ -212,6 +216,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
                                     <td className="p-4 text-right font-mono text-muted">{row.starts || 0}</td>
                                     <td className="p-4 text-right font-mono font-bold text-green-400">{row.win_rate.toFixed(1)}%</td>
                                     <td className="p-4 text-right font-mono text-yellow-400">{row.avg_latency.toFixed(0)}</td>
+                                    <td className="p-4 text-right font-mono text-amber-500/80">
+                                        {row.total_tokens?.toLocaleString()}
+                                    </td>
                                     <td className="p-4 text-center">
                                         {row.invalid_moves > 0 ?
                                             <span className="bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded text-xs font-bold">{row.invalid_moves}</span>

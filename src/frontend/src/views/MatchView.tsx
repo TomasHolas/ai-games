@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { PLAYER_COLORS } from '../config';
-import { RotateCcw, List, ArrowRightLeft, ChevronLeft, ChevronRight, SkipBack, SkipForward, AlertTriangle } from 'lucide-react';
 import { LogItemSnippet, ModelIcon } from '../components';
+import { Zap, ZapOff, RotateCcw, List, ArrowRightLeft, ChevronLeft, ChevronRight, SkipBack, SkipForward, AlertTriangle, Coins } from 'lucide-react';
 import { PokerBoard } from './PokerBoard';
 import { TicTacToeBoard } from './TicTacToeBoard'; // New wrapper
 import { GameStatusOverlay } from './GameStatusOverlay'; // New wrapper
@@ -46,6 +46,7 @@ export const MatchView: React.FC<MatchViewProps> = ({
 }) => {
     const logsEndRef = useRef<HTMLDivElement>(null);
     const [replayStep, setReplayStep] = useState<number>(0);
+    const [autoNext, setAutoNext] = useState(false);
 
     const gameInfo = (() => {
         switch (gameType) {
@@ -123,6 +124,36 @@ export const MatchView: React.FC<MatchViewProps> = ({
         setReplayStep(prev => Math.max(0, Math.min(logs.length - 1, prev + delta)));
     };
 
+    // Global Auto-Next Logic
+    useEffect(() => {
+        if (!autoNext || isReviewing) return;
+
+        let timer: any;
+
+        // POKER: Check for hand summary / end of hand
+        if (gameType === 'poker') {
+            const isEndOfHand = (displayGameState?.board as any)?.last_hand_result;
+            if (isEndOfHand) {
+                timer = setTimeout(() => {
+                    makeHumanMove("next");
+                }, 3000);
+            }
+        }
+        // OTHER GAMES: Check for game_over
+        else if (gameState?.game_over) {
+            timer = setTimeout(() => {
+                // Swap players for next game as requested
+                const temp = p1Model;
+                setP1Model(p2Model);
+                setP2Model(temp);
+                // Trigger next game
+                onStartGame();
+            }, 3000);
+        }
+
+        return () => clearTimeout(timer);
+    }, [autoNext, gameState?.game_over, (displayGameState?.board as any)?.last_hand_result, gameType, isReviewing, onStartGame, setP1Model, setP2Model, p1Model, p2Model, makeHumanMove]);
+
     return (
         <div className="flex flex-col h-screen overflow-hidden">
             <header className="flex justify-between items-center bg-surface border-b border-gray-800 p-4 shrink-0">
@@ -194,6 +225,17 @@ export const MatchView: React.FC<MatchViewProps> = ({
                 {/* Player Info */}
                 {/* Unified Player Info Header */}
                 <div className="flex items-center gap-4">
+                    {/* Global Auto-Next Toggle */}
+                    {!isReviewing && (
+                        <button
+                            onClick={() => setAutoNext(!autoNext)}
+                            title={autoNext ? "Auto-Next ON" : "Auto-Next OFF"}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all active:scale-95 ${autoNext ? 'bg-amber-500 text-black border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.4)]' : 'bg-white/5 text-amber-500 border-white/10 hover:bg-white/10'}`}
+                        >
+                            {autoNext ? <Zap className="w-4 h-4 fill-current" /> : <ZapOff className="w-4 h-4" />}
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Auto</span>
+                        </button>
+                    )}
                     <div className="flex gap-2 items-center bg-black/20 px-2 py-2 rounded-xl border border-white/5">
                         {normalizedPlayers.map((player) => {
                             // Active Turn Calculation
@@ -354,6 +396,9 @@ export const MatchView: React.FC<MatchViewProps> = ({
                                 const avgLatency = playerMetrics.length ?
                                     playerMetrics.reduce((a, b) => a + (b.latency ?? (player.idx === 0 ? b.latency_p1 : b.latency_p2) ?? 0), 0) / playerMetrics.length : 0;
 
+                                const totalTokens = playerMetrics.reduce((a, b) => a + (b.tokens || 0), 0);
+
+
                                 const playerColor = PLAYER_COLORS[player.idx % PLAYER_COLORS.length];
                                 const modelConfig = models.find(m => m.id === player.id);
 
@@ -372,7 +417,7 @@ export const MatchView: React.FC<MatchViewProps> = ({
                                             </div>
                                             <div className="w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(255,255,255,0.3)]" style={{ backgroundColor: playerColor }}></div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4 relative z-10">
+                                        <div className="grid grid-cols-3 gap-4 relative z-10">
                                             <div>
                                                 <div className="text-[10px] uppercase text-muted font-bold tracking-wider">Last</div>
                                                 <div className="text-xl font-mono font-bold" style={{ color: playerColor }}>
@@ -383,6 +428,14 @@ export const MatchView: React.FC<MatchViewProps> = ({
                                                 <div className="text-[10px] uppercase text-muted font-bold tracking-wider">Avg</div>
                                                 <div className="text-xl font-mono font-bold text-gray-400">
                                                     {(avgLatency / 1000).toFixed(2)}<span className="text-xs text-muted ml-0.5">s</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-[10px] uppercase text-muted font-bold tracking-wider flex items-center gap-1">
+                                                    <Coins className="w-3 h-3" /> Tokens
+                                                </div>
+                                                <div className="text-xl font-mono font-bold text-amber-500/80">
+                                                    {totalTokens.toLocaleString()}
                                                 </div>
                                             </div>
                                         </div>
