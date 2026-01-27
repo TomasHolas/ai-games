@@ -240,6 +240,118 @@ class StatsManager:
         return results
 
     @staticmethod
+    def get_model_stats_csv(game_type: str = None) -> str:
+        """
+        Generates a CSV string of all model statistics.
+        """
+        import io
+        import csv
+        from config.models import MODELS
+
+        # Create a lookup for provider
+        model_map = {m["id"]: m for m in MODELS}
+
+        stats = StatsManager.get_all_stats(game_type=game_type)
+        if not stats:
+            return ""
+
+        # Determine all field names from the first record + ensure priority ones come first
+        fieldnames = [
+            "model_id",
+            "provider",
+            "matches",
+            "wins",
+            "draws",
+            "losses",
+            "win_rate",
+            "avg_latency",
+            "total_tokens",
+            "invalid_moves",
+            "errors",
+        ]
+
+        # Add any extra keys that might exist
+        all_keys = set()
+        for s in stats:
+            all_keys.update(s.keys())
+        
+        for k in all_keys:
+            if k not in fieldnames:
+                fieldnames.append(k)
+
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        
+        writer.writeheader()
+        for row in stats:
+            # Flatten / Enrich
+            formatted_row = row.copy()
+            
+            # Add Provider
+            model_info = model_map.get(row["model_id"])
+            formatted_row["provider"] = model_info["provider"] if model_info else "Unknown"
+
+            # Format floats for better readability
+            if "win_rate" in formatted_row:
+                formatted_row["win_rate"] = f"{formatted_row['win_rate']:.2f}%"
+            if "avg_latency" in formatted_row:
+                formatted_row["avg_latency"] = f"{formatted_row['avg_latency']:.2f}"
+            
+            writer.writerow(formatted_row)
+        
+        return output.getvalue()
+
+    @staticmethod
+    def get_match_history_csv(game_type: str = None) -> str:
+        """
+        Generates a CSV string of raw match history.
+        """
+        import io
+        import csv
+        
+        # Get raw records
+        records = StatsManager.get_history(limit=10000, game_type=game_type)
+        if not records:
+            return ""
+            
+        fieldnames = [
+            "match_id",
+            "unix_timestamp",
+            "date",
+            "game_type",
+            "player1",
+            "player2",
+            "winner",
+            "error_by"
+        ]
+        
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for record in records:
+            # Flatten structure for CSV
+            row = {}
+            row["match_id"] = record.get("match_id")
+            row["unix_timestamp"] = record.get("timestamp")
+            
+            # Convert timestamp to readable date
+            import datetime
+            ts = record.get("timestamp")
+            if ts:
+                row["date"] = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+            
+            row["game_type"] = record.get("game_type")
+            row["player1"] = record.get("player1")
+            row["player2"] = record.get("player2")
+            row["winner"] = record.get("winner_model_id") or "Draw"
+            row["error_by"] = record.get("error_model_id") or ""
+            
+            writer.writerow(row)
+            
+        return output.getvalue()
+
+    @staticmethod
     def reset_all():
         for f in STATS_DIR.glob("*.json"):
             f.unlink()

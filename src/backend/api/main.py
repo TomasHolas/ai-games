@@ -10,7 +10,7 @@ import os
 import threading
 import time
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 # Core imports
@@ -89,6 +89,30 @@ def reset_stats():
     """Resets all statistics and game history."""
     StatsManager.reset_all()
     return {"status": "Stats reset"}
+
+
+@app.get("/api/stats/export")
+def export_stats(game_type: str = None):
+    """Exports all model statistics as a CSV file."""
+    csv_content = StatsManager.get_model_stats_csv(game_type=game_type)
+    filename = f"model_stats_{game_type}.csv" if game_type else "model_stats.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.get("/api/history/export")
+def export_history(game_type: str = None):
+    """Exports match history as a CSV file."""
+    csv_content = StatsManager.get_match_history_csv(game_type=game_type)
+    filename = f"match_history_{game_type}.csv" if game_type else "match_history.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.get("/api/history")
@@ -192,7 +216,7 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
                 # We interpret the request ID (pid) to get the LLM instance
                 # But use the unique name we generated above for the Player object
                 name = unique_player_names[i]
-                
+
                 # symbol is just index for Poker
                 p = Player(name=name, symbol=str(i), llm=get_llm_instance(pid))
                 players.append(p)
@@ -219,12 +243,8 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
                 p1_name = "Human" if p1_model_id == "human" else p1_model_id
                 p2_name = "Human" if p2_model_id == "human" else p2_model_id
 
-                p1 = Player(
-                    name=p1_name, symbol="X", llm=get_llm_instance(p1_model_id)
-                )
-                p2 = Player(
-                    name=p2_name, symbol="O", llm=get_llm_instance(p2_model_id)
-                )
+                p1 = Player(name=p1_name, symbol="X", llm=get_llm_instance(p1_model_id))
+                p2 = Player(name=p2_name, symbol="O", llm=get_llm_instance(p2_model_id))
                 players = [p1, p2]
 
                 model_stats[p1_model_id] = {
@@ -305,7 +325,9 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
                     logger.info(f"Received human move: {move}")
 
                     # Fix for Poker "next" and "finish" commands
-                    if move in ["next", "finish"] and hasattr(match_instance, "process_command"):
+                    if move in ["next", "finish"] and hasattr(
+                        match_instance, "process_command"
+                    ):
                         match_instance.process_command(move)
                         continue
 
@@ -326,10 +348,14 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
         except Exception:
             pass  # Client already disconnected
 
-        # Update final winner from match instance state if not set
         if not final_winner and match_instance:
-             final_winner = match_instance.game.get_winner()
-             final_winner_idx = match_instance.game.get_winner_idx()
+            # Robustness: If game ended without defined winner (e.g. disconnect or forced finish),
+            # ensure PokerGame treats it as a forced end to calculate chip leader.
+            if isinstance(match_instance.game, PokerGame):
+                match_instance.game.force_end = True  # type: ignore
+
+            final_winner = match_instance.game.get_winner()
+            final_winner_idx = match_instance.game.get_winner_idx()
 
         # Save statistics
         try:
@@ -362,7 +388,10 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
         except Exception as e:
             logger.error(f"Failed to save stats: {e}")
 
-        await websocket.close()
+        try:
+            await websocket.close()
+        except RuntimeError:
+            pass
 
     except WebSocketDisconnect:
         logger.info(f"Client disconnected {match_id}")
