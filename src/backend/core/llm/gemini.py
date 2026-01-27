@@ -49,20 +49,20 @@ class GeminiLLM(BaseLLM):
             config = types.GenerateContentConfig(
                 safety_settings=[
                     types.SafetySetting(
-                        category="HARM_CATEGORY_HARASSMENT", # type: ignore
-                        threshold="BLOCK_NONE", # type: ignore
+                        category="HARM_CATEGORY_HARASSMENT",  # type: ignore
+                        threshold="BLOCK_NONE",  # type: ignore
                     ),
                     types.SafetySetting(
-                        category="HARM_CATEGORY_HATE_SPEECH", # type: ignore
-                        threshold="BLOCK_NONE", # type: ignore
+                        category="HARM_CATEGORY_HATE_SPEECH",  # type: ignore
+                        threshold="BLOCK_NONE",  # type: ignore
                     ),
                     types.SafetySetting(
-                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT", # type: ignore
-                        threshold="BLOCK_NONE", # type: ignore
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",  # type: ignore
+                        threshold="BLOCK_NONE",  # type: ignore
                     ),
                     types.SafetySetting(
-                        category="HARM_CATEGORY_DANGEROUS_CONTENT", # type: ignore
-                        threshold="BLOCK_NONE", # type: ignore
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT",  # type: ignore
+                        threshold="BLOCK_NONE",  # type: ignore
                     ),
                 ]
             )

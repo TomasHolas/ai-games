@@ -64,13 +64,7 @@ export const MatchView: React.FC<MatchViewProps> = ({
     }, [logs, isReviewing]);
 
     // Initialize replay step to first step when entering review mode
-    useEffect(() => {
-        if (isReviewing && logs.length > 0) {
-            setReplayStep(0); // Start at first step
-        } else if (!isReviewing) {
-            setReplayStep(0);
-        }
-    }, [isReviewing, logs.length]);
+
 
     const p1Name = models.find(m => m.id === p1Model)?.name || p1Model;
     const p2Name = models.find(m => m.id === p2Model)?.name || p2Model;

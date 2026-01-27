@@ -59,10 +59,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
         }
     };
 
-    const getProvider = (modelId: string): string => {
-        const m = models.find(model => model.id === modelId);
-        return m?.provider || "Other";
-    };
+
 
     const processedData = useMemo(() => {
         let data: ModelStats[] = [];
@@ -78,10 +75,17 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
                 invalid_moves: number;
                 errors: number;
                 starts: number;
+                poker_hands?: number;
+                poker_vpip_hands?: number;
+                poker_pfr_hands?: number;
+                poker_aggr_actions?: number;
+                poker_call_actions?: number;
             }> = {};
 
             stats.forEach(s => {
-                const provider = getProvider(s.model_id);
+                const m = models.find(model => model.id === s.model_id);
+                const provider = m?.provider || "Other";
+
                 if (!groups[provider]) {
                     groups[provider] = {
                         model_id: provider,
@@ -90,7 +94,12 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
                         total_latency_weighted: 0,
                         invalid_moves: 0,
                         errors: 0,
-                        starts: 0
+                        starts: 0,
+                        poker_hands: 0,
+                        poker_vpip_hands: 0,
+                        poker_pfr_hands: 0,
+                        poker_aggr_actions: 0,
+                        poker_call_actions: 0
                     };
                 }
                 groups[provider].matches += s.matches;
@@ -99,6 +108,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
                 groups[provider].invalid_moves += s.invalid_moves;
                 groups[provider].errors += s.errors || 0;
                 groups[provider].starts += s.starts || 0;
+
+                // Aggregate poker stats
+                groups[provider].poker_hands = (groups[provider].poker_hands || 0) + (s.poker_hands || 0);
+                groups[provider].poker_vpip_hands = (groups[provider].poker_vpip_hands || 0) + (s.poker_vpip_hands || 0);
+                groups[provider].poker_pfr_hands = (groups[provider].poker_pfr_hands || 0) + (s.poker_pfr_hands || 0);
+                groups[provider].poker_aggr_actions = (groups[provider].poker_aggr_actions || 0) + (s.poker_aggr_actions || 0);
+                groups[provider].poker_call_actions = (groups[provider].poker_call_actions || 0) + (s.poker_call_actions || 0);
             });
 
             data = Object.values(groups).map(g => ({
@@ -112,7 +128,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
             }));
         }
         return data.sort((a, b) => b.win_rate - a.win_rate);
-    }, [stats, grouping, models, gameTypeFilter]);
+    }, [stats, grouping, models]);
 
     return (
         <div className="p-8 max-w-7xl mx-auto w-full">
@@ -204,6 +220,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
                             </th>
                             <th className="p-4 text-center">Inv. Moves</th>
                             <th className="p-4 text-center text-red-400">Errors</th>
+                            {gameTypeFilter === 'poker' && (
+                                <>
+                                    <th className="p-4 text-center text-blue-400" title="Voluntarily Put Money In Pot %">VPIP</th>
+                                    <th className="p-4 text-center text-purple-400" title="Pre-Flop Raise %">PFR</th>
+                                    <th className="p-4 text-center text-orange-400" title="Aggression Factor (Bet+Raise / Call)">AF</th>
+                                </>
+                            )}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
@@ -257,6 +280,25 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
                                             : <span className="text-muted opacity-30">-</span>
                                         }
                                     </td>
+                                    {gameTypeFilter === 'poker' && (
+                                        <>
+                                            <td className="p-4 text-center font-mono font-bold text-blue-400">
+                                                {(row.poker_hands || 0) > 0 ?
+                                                    `${(((row.poker_vpip_hands || 0) / (row.poker_hands || 1)) * 100).toFixed(0)}%`
+                                                    : '-'}
+                                            </td>
+                                            <td className="p-4 text-center font-mono font-bold text-purple-400">
+                                                {(row.poker_hands || 0) > 0 ?
+                                                    `${(((row.poker_pfr_hands || 0) / (row.poker_hands || 1)) * 100).toFixed(0)}%`
+                                                    : '-'}
+                                            </td>
+                                            <td className="p-4 text-center font-mono font-bold text-orange-400">
+                                                {(row.poker_call_actions || 0) > 0
+                                                    ? ((row.poker_aggr_actions || 0) / (row.poker_call_actions || 1)).toFixed(2)
+                                                    : ((row.poker_aggr_actions || 0) > 0 ? "Inf" : "-")}
+                                            </td>
+                                        </>
+                                    )}
                                 </tr>
                             ))
                         )}

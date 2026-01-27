@@ -27,8 +27,9 @@ import type { ProviderStatus, ModelConfig } from './types';
 
 function App() {
     // Navigation State
+    // Navigation State
     const {
-        view, setView,
+        view, setView: rawSetView,
         inGame, setInGame,
         isReviewing, setIsReviewing,
         pendingReplayId, setPendingReplayId
@@ -37,12 +38,13 @@ function App() {
     // History State
     const [historyData, setHistoryData] = useState<any>(null);
 
-    // Reset history data when leaving match view, unless we are reviewing
-    useEffect(() => {
-        if (view !== 'match') {
+    // Wrapper for view switching to handle cleanup
+    const setView = (newView: any) => {
+        rawSetView(newView);
+        if (newView !== 'match') {
             setHistoryData(null);
         }
-    }, [view]);
+    };
 
     // Model Selection (Independent per game type)
     const [gameModels, setGameModels] = useState<Record<string, { p1: string; p2: string }>>({
@@ -225,7 +227,7 @@ function App() {
             player: l.current_player,
             move: l.message,
             metrics: l.metrics,
-            timestamp: new Date(l.timestamp || Date.now()).toLocaleTimeString(),
+            timestamp: new Date(l.timestamp || (historyData.timestamp * 1000)).toLocaleTimeString(),
             is_invalid: l.is_invalid,
             raw_response: l.raw_response,
             thinking: l.thinking,
@@ -283,6 +285,7 @@ function App() {
             <div className="flex-1 bg-background flex flex-col overflow-auto">
                 {inGame ? (
                     <MatchView
+                        key={isReviewing ? `review-${matchViewProps.matchId}` : `live-${matchViewProps.matchId}`}
                         {...matchViewProps}
                         setP1Model={(m) => setP1Model(gameType, m)}
                         setP2Model={(m) => setP2Model(gameType, m)}

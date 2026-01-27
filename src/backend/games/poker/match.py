@@ -11,7 +11,7 @@ logger = setup_logger(__name__)
 class PokerMatch(Match):
     def __init__(self, game: BaseGame, players: List[Player], system_prompt: str):
         super().__init__(game, players, system_prompt)
-        self.command_queue = queue.Queue() # type: ignore
+        self.command_queue = queue.Queue()  # type: ignore
 
     def process_command(self, cmd: str):
         """Thread-safe method to receive commands from outside (e.g. WebSocket)."""
@@ -33,15 +33,16 @@ class PokerMatch(Match):
 
         # IMPORTANT: Sync with game engine's initial player (preflop starts at UTG, not index 0)
         # IMPORTANT: Sync with game engine's initial player (preflop starts at UTG, not index 0)
-        self.current_player_idx = self.game.current_player_idx # type: ignore
+        self.current_player_idx = self.game.current_player_idx  # type: ignore
 
         # IMPORTANT: Sync with game engine's initial player (preflop starts at UTG, not index 0)
-        self.current_player_idx = self.game.current_player_idx # type: ignore
+        self.current_player_idx = self.game.current_player_idx  # type: ignore
 
         # System player placeholder
         class SystemPlayer:
             name = "System"
             symbol = "SYS"
+
         self._system_player = SystemPlayer()
 
         if on_update:
@@ -54,7 +55,7 @@ class PokerMatch(Match):
 
         while not self.game.is_game_over() and self.is_running:
             # Handle manual wait between hands (End Screen pause)
-            if hasattr(self.game, "stage") and self.game.stage == "HAND_OVER": # type: ignore
+            if hasattr(self.game, "stage") and self.game.stage == "HAND_OVER":  # type: ignore
                 # Non-blocking check for commands
                 try:
                     cmd = self.command_queue.get(timeout=0.5)
@@ -62,9 +63,9 @@ class PokerMatch(Match):
 
                     if cmd.strip() == "next":
                         if hasattr(self.game, "start_new_hand"):
-                            self.game.start_new_hand() # type: ignore
+                            self.game.start_new_hand()  # type: ignore
                             # Re-sync player index after new hand generic setup
-                            self.current_player_idx = self.game.current_player_idx # type: ignore
+                            self.current_player_idx = self.game.current_player_idx  # type: ignore
 
                             if on_update:
                                 # Send system message to clear end-screen overlay
@@ -132,7 +133,7 @@ class PokerMatch(Match):
             )
 
             # Sync game engine's current player pointer BEFORE notifications
-            self.game.current_player_idx = self.current_player_idx # type: ignore
+            self.game.current_player_idx = self.current_player_idx  # type: ignore
 
             # 1. Notify that player is thinking
             if on_update:
@@ -166,7 +167,7 @@ class PokerMatch(Match):
                         f"Player {current_player.name} hit rate limit. Eliminating from game."
                     )
 
-                    self.game.eliminate_player(self.current_player_idx) # type: ignore
+                    self.game.eliminate_player(self.current_player_idx)  # type: ignore
 
                     if on_update:
                         self._notify(
@@ -184,7 +185,7 @@ class PokerMatch(Match):
 
                 # 3. Apply move
                 # Sync game engine's current player pointer to match the loop's pointer
-                self.game.current_player_idx = self.current_player_idx # type: ignore
+                self.game.current_player_idx = self.current_player_idx  # type: ignore
 
                 success = self.game.make_move(move_raw, current_player.symbol)
 
@@ -192,8 +193,25 @@ class PokerMatch(Match):
                     # Attach hand cards if folding, so frontend can show what was folded
                     extra_data = {}
                     if "fold" in move_raw.lower():
-                        p_data = self.game.players[self.current_player_idx] # type: ignore
+                        p_data = self.game.players[self.current_player_idx]  # type: ignore
                         extra_data["folded_cards"] = [str(c) for c in p_data["hand"]]
+
+                    # Parse move for structured logging
+                    action_type = "unknown"
+                    action_amount = 0
+                    try:
+                        parts = move_raw.lower().strip().split()
+                        if parts:
+                            action_type = parts[0]
+                            if len(parts) > 1 and parts[1].isdigit():
+                                action_amount = int(parts[1])
+                            elif action_type in ["call", "allin"]:
+                                # For call/allin, we might want to record the actual chips put in.
+                                # But that logic is inside game.make_move.
+                                # Ideally we'd get that from the game engine, but for now exact amount is secondary to the action type for VPIP/PFR.
+                                pass
+                    except Exception:
+                        pass
 
                     if on_update:
                         self._notify(
@@ -206,12 +224,23 @@ class PokerMatch(Match):
                             system_prompt=response.system_prompt,
                             user_prompt=response.user_prompt,
                             active_player_override=current_player,
+                            # New Analytics Fields
+                            poker_action={
+                                "type": action_type,
+                                "amount": action_amount,
+                                "stage": (
+                                    self.game.stage
+                                    if hasattr(self.game, "stage")
+                                    else "unknown"
+                                ),
+                                "pot": getattr(self.game, "pot", 0),
+                            },
                             **extra_data,
                         )
 
                     # Game engine handles turn order - we sync at start of each iteration
                     logger.info(
-                        f"After move: game.current_player_idx={self.game.current_player_idx}, stage={self.game.stage}" # type: ignore
+                        f"After move: game.current_player_idx={self.game.current_player_idx}, stage={self.game.stage}"  # type: ignore
                     )
                     turn_count += 1
                     logger.info(
@@ -224,12 +253,12 @@ class PokerMatch(Match):
                         f"Invalid move: {move_raw} by {current_player.name}. Forcing FOLD."
                     )
 
-                    self.game.force_fold(self.current_player_idx) # type: ignore
+                    self.game.force_fold(self.current_player_idx)  # type: ignore
 
                     # Capture folded cards for display even on forced fold
                     folded_cards = []
                     try:
-                        p_data = self.game.players[self.current_player_idx] # type: ignore
+                        p_data = self.game.players[self.current_player_idx]  # type: ignore
                         folded_cards = [str(c) for c in p_data["hand"]]
                     except Exception:
                         pass
@@ -251,7 +280,7 @@ class PokerMatch(Match):
 
                     # Game engine handles turn order after force_fold - we sync at start of each iteration
                     logger.info(
-                        f"After force_fold: game.current_player_idx={self.game.current_player_idx}, stage={self.game.stage}" # type: ignore
+                        f"After force_fold: game.current_player_idx={self.game.current_player_idx}, stage={self.game.stage}"  # type: ignore
                     )
 
                     turn_count += 1
@@ -292,7 +321,7 @@ class PokerMatch(Match):
                             self._notify(
                                 on_update,
                                 turn_count,
-                                f"--- {self.game.stage} ---", # type: ignore
+                                f"--- {self.game.stage} ---",  # type: ignore
                                 active_player_override=self._system_player,
                             )
 

@@ -74,6 +74,12 @@ export interface ModelStats {
     starts: number;
     avg_latency: number;
     win_rate: number;
+    // Poker Specifics
+    poker_hands?: number;
+    poker_vpip_hands?: number;
+    poker_pfr_hands?: number;
+    poker_aggr_actions?: number;
+    poker_call_actions?: number;
 }
 
 export interface MetricsHistoryEntry {

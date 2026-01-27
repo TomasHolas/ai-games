@@ -158,6 +158,10 @@ class Match:
 
         if on_update:
             msg = f"Winner: {winner_name}" if winner_name else "Draw!"
+            # Use a dummy system player so the frontend treats this as a system message
+            # and doesn't color it with the previous player's color
+            system_player = Player(name="System", symbol="S", llm=None)  # type: ignore
+
             self._notify(
                 on_update,
                 turn_count,
@@ -165,6 +169,7 @@ class Match:
                 game_over=True,
                 winner=winner_name,
                 winner_idx=winner_idx,
+                active_player_override=system_player,
             )
 
     def _notify(

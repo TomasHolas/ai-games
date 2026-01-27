@@ -43,7 +43,6 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
     const [gameTypeFilter, setGameTypeFilter] = useState("all");
 
     useEffect(() => {
-        setLoading(true);
         const url = gameTypeFilter === 'all'
             ? API_ENDPOINTS.history
             : `${API_ENDPOINTS.history}?game_type=${gameTypeFilter}`;
@@ -95,7 +94,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                 {GAME_TYPES.map((gt) => (
                     <button
                         key={gt.id}
-                        onClick={() => setGameTypeFilter(gt.id)}
+                        onClick={() => {
+                            setGameTypeFilter(gt.id);
+                            setLoading(true);
+                        }}
                         className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${gameTypeFilter === gt.id
                             ? 'bg-primary/20 text-primary border border-primary/30'
                             : 'bg-surface border border-gray-800 text-muted hover:bg-white/5'

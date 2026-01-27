@@ -123,52 +123,67 @@ export function useGameWebSocket({
                         tokens: data.metrics.total_tokens,
                         player: data.message.split(" ")[0]
                     }]);
-                } else if (data.is_invalid) {
-                    setLogs(prev => [...prev, {
-                        turn: data.turn,
-                        player: data.current_player,
-                        move: data.message,
-                        timestamp: new Date().toLocaleTimeString(),
-                        is_invalid: true,
-                        raw_response: data.raw_response,
-                        thinking: data.thinking,
-                        system_prompt: data.system_prompt,
-                        user_prompt: data.user_prompt,
-                        current_symbol: data.current_symbol,
-                        player_index: data.current_player_idx,
-                        board: data.board
-                    }]);
                 } else if (data.game_over) {
-                    setLogs(prev => [...prev, {
+                    const newLog = {
                         turn: data.turn,
                         player: "System",
                         move: data.message,
                         timestamp: new Date().toLocaleTimeString(),
-                        board: data.board
-                    }]);
+                        board: data.board,
+                        // Pass along winner/metrics info for the visual state
+                        winner: data.winner,
+                        winner_index: data.winner_index,
+                        metrics: data.metrics,
+                        is_invalid: data.is_invalid,
+                        raw_response: data.raw_response,
+                        thinking: data.thinking,
+                        system_prompt: data.system_prompt,
+                        user_prompt: data.user_prompt,
+                        is_hand_summary: data.is_hand_summary,
+                        hand_result: data.hand_result
+                    };
 
-                    // Automatically return to menu after a short delay to let user see "Winner" message
-                    // IF user explicitly finished (poker), exit immediately
-                    const delay = userTriggeredFinish.current ? 0 : 2000;
+                    setLogs(prev => {
+                        const last = prev[prev.length - 1];
+                        if (last && last.turn === newLog.turn && last.move === newLog.move && (last.player === newLog.player || newLog.player === 'System')) {
+                            return prev;
+                        }
+                        return [...prev, newLog];
+                    });
 
-                    setTimeout(() => {
-                        // Close socket to prevent further updates
+                    // Only close and trigger callback if USER explicitly finished (e.g. clicked End Game)
+                    // Otherwise, stay on the screen (for TTT auto-next, or manual review)
+                    if (userTriggeredFinish.current) {
                         if (wsRef.current) wsRef.current.close();
                         onGameEnd?.();
-                    }, delay);
-
+                    }
                 } else {
                     // Generic system message (Summary, Separator, etc)
-                    setLogs(prev => [...prev, {
+                    const newLog = {
                         turn: data.turn,
                         player: data.current_player || "System",
                         move: data.message,
                         timestamp: new Date().toLocaleTimeString(),
                         board: data.board,
+                        metrics: data.metrics,
+                        is_invalid: data.is_invalid,
+                        raw_response: data.raw_response,
+                        thinking: data.thinking,
+                        system_prompt: data.system_prompt,
+                        user_prompt: data.user_prompt,
+                        current_symbol: data.current_symbol,
                         is_hand_summary: data.is_hand_summary,
                         hand_result: data.hand_result,
                         player_index: data.current_player_idx
-                    }]);
+                    };
+
+                    setLogs(prev => {
+                        const last = prev[prev.length - 1];
+                        if (last && last.turn === newLog.turn && last.move === newLog.move && last.player === newLog.player) {
+                            return prev;
+                        }
+                        return [...prev, newLog];
+                    });
                 }
             }
         };
@@ -183,7 +198,7 @@ export function useGameWebSocket({
         };
 
         wsRef.current = socket;
-    }, [p1Model, p2Model, gameType, models, players]);
+    }, [p1Model, p2Model, gameType, models, players, onGameEnd]);
 
     const stopGame = useCallback(() => {
         if (wsRef.current) {
