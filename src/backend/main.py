@@ -22,12 +22,21 @@ def get_llm_instance(model_name: str):
 def main():
     print("🤖 Welcome to AI Games: Battle of Titans! 🤖")
 
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run AI Games match")
+    parser.add_argument("--p1", default="gpt-4o", help="Player 1 Model ID")
+    parser.add_argument("--p2", default="gemini-2.5-flash", help="Player 2 Model ID")
+    parser.add_argument("--game", default="tictactoe", help="Game type")
+    args = parser.parse_args()
+
     # 1. Game setup
+    # TODO: Support dynamic game selection from args
     game = TicTacToe()
 
     # 2. Select gladiators
-    model_name_1 = "gpt-4o"  # Player 1 (X)
-    model_name_2 = "gemini-1.5-flash"  # Player 2 (O)
+    model_name_1 = args.p1
+    model_name_2 = args.p2
 
     print(f"⚔️  Today's match: {model_name_1} vs {model_name_2}")
 
@@ -37,6 +46,10 @@ def main():
         p1 = Player(name=model_name_1, symbol="X", llm=llm1)
 
         # Player 2
+        # Use appropriate Gemini model if requested
+        if model_name_2 == "gemini-1.5-flash" and "gemini-2.5-flash" in model_name_2:
+            pass  # Keep as requested
+
         llm2 = get_llm_instance(model_name_2)
         p2 = Player(name=model_name_2, symbol="O", llm=llm2)
 

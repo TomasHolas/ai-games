@@ -34,13 +34,13 @@ class PokerGame(BaseGame):
         self.deck = Deck()
         self.community_cards: List[Card] = []
         self.pot = 0
-        
+
         # Randomize starting dealer position
         # We set it effectively to (Target - 1) so that the first call to start_new_hand()
         # (which increments dealer_idx) lands exactly on our random Target.
         target_dealer = random.randint(0, len(player_names) - 1)
         self.dealer_idx = (target_dealer - 1) % len(player_names)
-        
+
         self.current_player_idx = 0
         self.stage = PREFLOP
         self.wins = {name: 0 for name in player_names}
@@ -117,14 +117,16 @@ class PokerGame(BaseGame):
         sb_idx = get_next_active(self.dealer_idx)
         bb_idx = get_next_active(sb_idx)
 
-        print(f"[GAME] Posting Blinds: Dealer={self.dealer_idx}, SB={sb_idx}, BB={bb_idx}")
+        print(
+            f"[GAME] Posting Blinds: Dealer={self.dealer_idx}, SB={sb_idx}, BB={bb_idx}"
+        )
 
         self._post_blind(sb_idx, self.small_blind)
         self._post_blind(bb_idx, self.big_blind)
 
         # Action starts after BB (UTG)
-        start_offset = get_next_active(bb_idx) # Actually UTG is the one AFTER BB
-        
+        start_offset = get_next_active(bb_idx)  # Actually UTG is the one AFTER BB
+
         # Find first active player starting from UTG
         for i in range(len(self.players)):
             idx = (start_offset + i) % len(self.players)
@@ -144,7 +146,7 @@ class PokerGame(BaseGame):
         p = self.players[player_idx]
         p["status"] = "folded"
         p["is_eliminated"] = True
-        
+
         # Advance to next active player to keep game moving
         # Need to be careful not to create infinite loop if everyone eliminated
         for i in range(1, len(self.players) + 1):
@@ -152,11 +154,8 @@ class PokerGame(BaseGame):
             if self.players[next_idx]["status"] == "active":
                 self.current_player_idx = next_idx
                 break
-                
-        self._check_round_completion()
 
-        self.last_raiser_idx = bb_idx
-        self.min_raise = self.big_blind
+        self._check_round_completion()
 
     def _post_blind(self, player_idx: int, amount: int):
         """
@@ -623,7 +622,9 @@ class PokerGame(BaseGame):
     def get_winner(self) -> str | None:
         if self.is_game_over() or getattr(self, "force_end", False):
             # Return player with most chips
-            sorted_players = sorted(self.players, key=lambda p: p["chips"], reverse=True)
+            sorted_players = sorted(
+                self.players, key=lambda p: p["chips"], reverse=True
+            )
             return sorted_players[0]["name"] if sorted_players else None
         return None
 
@@ -631,11 +632,13 @@ class PokerGame(BaseGame):
         """Returns the index of the winning player."""
         if self.is_game_over() or getattr(self, "force_end", False):
             # Sort to find winner, then find original index
-            sorted_players = sorted(self.players, key=lambda p: p["chips"], reverse=True)
+            sorted_players = sorted(
+                self.players, key=lambda p: p["chips"], reverse=True
+            )
             if not sorted_players:
                 return None
             winner_name = sorted_players[0]["name"]
-            
+
             for i, p in enumerate(self.players):
                 if p["name"] == winner_name:
                     return i

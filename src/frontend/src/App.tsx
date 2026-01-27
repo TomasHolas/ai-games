@@ -19,36 +19,30 @@ import { Sidebar } from './components';
 import { DashboardView, GamesView, MetricsView, MatchView, HistoryView } from './views';
 
 // Hooks
-import { useGameWebSocket } from './hooks';
+import { useGameWebSocket, useAppNavigation } from './hooks';
 
 // Config & Types
 import { API_ENDPOINTS, FALLBACK_MODELS } from './config';
 import type { ProviderStatus, ModelConfig } from './types';
 
-type ViewType = 'dashboard' | 'games' | 'metrics' | 'match' | 'history' | 'replay';
-
-// Helper to parse hash - supports 'replay/{matchId}' format
-const parseHash = (): { view: ViewType; matchId?: string } => {
-    const hash = window.location.hash.replace('#', '');
-    if (hash.startsWith('replay/')) {
-        return { view: 'replay', matchId: hash.replace('replay/', '') };
-    }
-    const validViews: ViewType[] = ['dashboard', 'games', 'metrics', 'history'];
-    return { view: validViews.includes(hash as ViewType) ? (hash as ViewType) : 'dashboard' };
-};
-
 function App() {
-    // Parse initial state from URL
-    const initialState = parseHash();
-
-    // Navigation State - initialize from URL hash
-    const [view, setView] = useState<ViewType>(initialState.view === 'replay' ? 'match' : initialState.view);
-    const [inGame, setInGame] = useState(initialState.view === 'replay');
-    const [isReviewing, setIsReviewing] = useState(initialState.view === 'replay');
-    const [pendingReplayId, setPendingReplayId] = useState<string | null>(initialState.matchId || null);
+    // Navigation State
+    const {
+        view, setView,
+        inGame, setInGame,
+        isReviewing, setIsReviewing,
+        pendingReplayId, setPendingReplayId
+    } = useAppNavigation();
 
     // History State
     const [historyData, setHistoryData] = useState<any>(null);
+
+    // Reset history data when leaving match view, unless we are reviewing
+    useEffect(() => {
+        if (view !== 'match') {
+            setHistoryData(null);
+        }
+    }, [view]);
 
     // Model Selection (Independent per game type)
     const [gameModels, setGameModels] = useState<Record<string, { p1: string; p2: string }>>({
@@ -110,7 +104,6 @@ function App() {
     }, [pendingReplayId, historyData]);
 
     // Sync URL hash with view state
-    // Sync URL hash with view state
     useEffect(() => {
         if (isReviewing && historyData) {
             window.location.hash = `replay/${historyData.match_id}`;
@@ -118,26 +111,6 @@ function App() {
             window.location.hash = view;
         }
     }, [view, inGame, isReviewing, historyData]);
-
-    // Listen for hash changes (browser back/forward)
-    useEffect(() => {
-        const handleHashChange = () => {
-            const parsed = parseHash();
-            if (parsed.view === 'replay' && parsed.matchId) {
-                setPendingReplayId(parsed.matchId);
-                setIsReviewing(true);
-                setInGame(true);
-                setView('match');
-            } else if (!inGame || isReviewing) {
-                setView(parsed.view);
-                setInGame(false);
-                setIsReviewing(false);
-                setHistoryData(null);
-            }
-        };
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, [inGame, isReviewing]);
 
     // Poker State
     const [pokerPlayers, setPokerPlayers] = useState<string[]>(Array(4).fill(""));

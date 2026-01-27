@@ -12,7 +12,7 @@ class HumanLLM(BaseLLM):
         # Human player doesn't need API keys
         super().__init__(model_name=model_name, api_key="none")
         self.move_event = threading.Event()
-        self.next_move = None
+        self.next_move: str | None = None
 
     def set_move(self, move: str):
         """Called by the API/WebSocket layer when a human move is received."""

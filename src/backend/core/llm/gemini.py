@@ -15,7 +15,7 @@ class GeminiLLM(BaseLLM):
     """
 
     def __init__(self, model_name: str = "gemini-1.5-pro"):
-        super().__init__(model_name, settings.GEMINI_API_KEY)
+        super().__init__(model_name, settings.GEMINI_API_KEY or "")
 
         if not self.api_key:
             logger.warning("Missing Gemini API Key in configuration.")
@@ -30,7 +30,9 @@ class GeminiLLM(BaseLLM):
         if not self.client:
             return LLMResponse(
                 content="ERROR: Missing Gemini API Key.",
-                metrics=LLMMetrics(0, 0, 0, 0),
+                metrics=LLMMetrics(
+                    latency_ms=0, prompt_tokens=0, completion_tokens=0, total_tokens=0
+                ),
                 model_name=self.model_name,
             )
 
@@ -42,22 +44,25 @@ class GeminiLLM(BaseLLM):
             # Using basic config to disable blocking if possible.
             # Note: The new SDK types structure is different.
 
-            # Simplified safety config for now as mapping is complex in new SDK versions
+            # Simplified safety config with type ignores as the SDK types are strict Enums
+            # and we want to pass strings or would need to import exact Enums which might vary by version.
             config = types.GenerateContentConfig(
                 safety_settings=[
                     types.SafetySetting(
-                        category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_NONE"
+                        category="HARM_CATEGORY_HARASSMENT", # type: ignore
+                        threshold="BLOCK_NONE", # type: ignore
                     ),
                     types.SafetySetting(
-                        category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_NONE"
+                        category="HARM_CATEGORY_HATE_SPEECH", # type: ignore
+                        threshold="BLOCK_NONE", # type: ignore
                     ),
                     types.SafetySetting(
-                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        threshold="BLOCK_NONE",
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT", # type: ignore
+                        threshold="BLOCK_NONE", # type: ignore
                     ),
                     types.SafetySetting(
-                        category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                        threshold="BLOCK_NONE",
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT", # type: ignore
+                        threshold="BLOCK_NONE", # type: ignore
                     ),
                 ]
             )
@@ -83,7 +88,7 @@ class GeminiLLM(BaseLLM):
                     raise e
             # ------------------
 
-            content = response.text
+            content = response.text or ""
 
             latency = (time.time() - start_time) * 1000
 
