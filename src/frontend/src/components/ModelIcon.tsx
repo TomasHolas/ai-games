@@ -72,7 +72,7 @@ export const ModelIcon: React.FC<ModelIconProps> = ({ model = "", provider = "",
     let Icon: any = Cpu; // Default generic icon
     let colorClass = "text-gray-400";
 
-    if (normalizedProvider === "user" || normalizedModel === "human") {
+    if (normalizedProvider === "user" || normalizedModel.includes("human")) {
         Icon = User;
         colorClass = "text-emerald-400";
     } else if (normalizedProvider.includes("openai") || normalizedModel.includes("phi")) {

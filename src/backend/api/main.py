@@ -179,7 +179,7 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
             for i, pid in enumerate(player_ids):
                 # We use simple naming, could use P1, P2 etc.
                 if pid == "human":
-                    name = f"human {i+1}"
+                    name = f"Human {i+1}"
                 else:
                     name = pid
 
@@ -205,11 +205,14 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str):
             try:
                 p1_model_id = config["player1"]
                 p2_model_id = config["player2"]
+                p1_name = "Human" if p1_model_id == "human" else p1_model_id
+                p2_name = "Human" if p2_model_id == "human" else p2_model_id
+
                 p1 = Player(
-                    name=p1_model_id, symbol="X", llm=get_llm_instance(p1_model_id)
+                    name=p1_name, symbol="X", llm=get_llm_instance(p1_model_id)
                 )
                 p2 = Player(
-                    name=p2_model_id, symbol="O", llm=get_llm_instance(p2_model_id)
+                    name=p2_name, symbol="O", llm=get_llm_instance(p2_model_id)
                 )
                 players = [p1, p2]
 

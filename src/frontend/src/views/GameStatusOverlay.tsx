@@ -71,13 +71,15 @@ export const GameStatusOverlay: React.FC<GameStatusOverlayProps> = ({
                             </div>
                             <div className="h-px w-20 bg-gradient-to-l from-transparent to-yellow-500/30" />
                         </div>
-                        <div className="text-6xl lg:text-9xl font-black tracking-tighter text-white drop-shadow-2xl text-center px-4 uppercase"
-                            style={{
-                                filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.8))',
-                                textShadow: '0 0 40px rgba(234,179,8,0.2)'
-                            }}>
-                            {cleanMessage}
-                        </div>
+                        {cleanMessage !== "Poker Game started" && cleanMessage !== "New hand started" && (
+                            <div className="text-6xl lg:text-9xl font-black tracking-tighter text-white drop-shadow-2xl text-center px-4 uppercase"
+                                style={{
+                                    filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.8))',
+                                    textShadow: '0 0 40px rgba(234,179,8,0.2)'
+                                }}>
+                                {cleanMessage}
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className={`

@@ -137,7 +137,8 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
         const playerColor = PLAYER_COLORS[i % PLAYER_COLORS.length];
 
         // Resolve human-readable model name
-        const modelName = models.find(m => m.id === p.name)?.name || p.name;
+        let modelName = models.find(m => m.id === p.name)?.name || p.name;
+        if (modelName === "human") modelName = "Human";
 
         return {
             id: p.name, // Use ID for icon lookup
@@ -304,10 +305,11 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
                                                 <div className="flex -space-x-2">
                                                     {playersWithRank.map(pid => {
                                                         const pIdx = activePlayers.findIndex(ap => ap.name === pid);
+                                                        if (pIdx === -1) return null;
                                                         const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
                                                         return (
                                                             <div key={pid} className="group relative">
-                                                                <div className="w-4 h-4 rounded-full ring-2 ring-[#1a1c23] shadow-lg" style={{ backgroundColor: color }} />
+                                                                <div className="w-3 h-3 rounded-full ring-2 ring-[#1a1c23] shadow-lg" style={{ backgroundColor: color }} />
                                                             </div>
                                                         )
                                                     })}
@@ -345,7 +347,7 @@ export const PokerBoard: React.FC<PokerBoardProps> = ({ gameState, makeHumanMove
                                 color: winnerColor,
                                 textShadow: `0 0 30px ${winnerColor}30`
                             }}>
-                            {getWinnerName(lastHandResult.winners[0])}
+                            {getWinnerName(lastHandResult.winners[0]) === "human" ? "Human" : getWinnerName(lastHandResult.winners[0])}
                         </div>
 
                         {/* Badges Row */}

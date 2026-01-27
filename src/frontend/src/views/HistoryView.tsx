@@ -156,10 +156,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ models, onSelectMatch 
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 {players.slice(0, 4).map((p, i) => (
-                                                    <div key={i} className={`flex items-center gap-1.5 px-2 py-1 rounded bg-black/20 border ${p === winner ? "border-secondary/40" : "border-white/5"}`}>
+                                                    <div key={i} className={`flex items-center gap-1.5 px-2 py-1 rounded bg-black/20 border ${p.toLowerCase() === winner?.toLowerCase() ? "border-secondary/40" : "border-white/5"}`}>
                                                         <ModelIcon model={p} provider={getProvider(p)} size={14} />
-                                                        <span className={`text-xs ${p === winner ? "text-secondary font-bold" : "text-gray-400"}`}>
-                                                            {getModelName(p)}
+                                                        <span className={`text-xs ${p.toLowerCase() === winner?.toLowerCase() ? "text-secondary font-bold" : "text-gray-400"}`}>
+                                                            {getModelName(p) === "human" ? "Human" : getModelName(p)}
                                                         </span>
                                                     </div>
                                                 ))}
