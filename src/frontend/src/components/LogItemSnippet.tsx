@@ -154,7 +154,7 @@ export const LogItemSnippet: React.FC<LogItemSnippetProps> = ({ log, models }) =
                                     }}
                                 >
                                     <span className="text-[10px] opacity-40 mr-2 uppercase font-black">Move</span>
-                                    {moveDisplay}
+                                    {moveDisplay.length > 50 ? moveDisplay.substring(0, 50) + "..." : moveDisplay}
                                 </div>
 
 

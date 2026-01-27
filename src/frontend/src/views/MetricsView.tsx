@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Shield, LayoutGrid, Cpu, Grid3X3, Gamepad2, Coins } from 'lucide-react';
+import { Shield, LayoutGrid, Cpu, Grid3X3, Gamepad2, Coins, Download, History as HistoryIcon } from 'lucide-react';
 import { ModelIcon } from '../components';
 import { API_ENDPOINTS } from '../config';
 import type { ModelStats, ModelConfig } from '../types';
@@ -131,6 +131,32 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ models }) => {
                             className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${grouping === 'providers' ? 'bg-primary text-black shadow-sm' : 'text-muted hover:text-white'}`}
                         >
                             <Cpu className="w-3 h-3" /> By Provider
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => {
+                                const url = gameTypeFilter === 'all'
+                                    ? `${API_ENDPOINTS.stats}/export`
+                                    : `${API_ENDPOINTS.stats}/export?game_type=${gameTypeFilter}`;
+                                window.open(url, '_blank');
+                            }}
+                            className="px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 border border-blue-500/30 hover:bg-blue-500/10 transition-all bg-surface text-blue-400 hover:text-blue-300"
+                        >
+                            <Download className="w-4 h-4" />
+                            Export Stats
+                        </button>
+                        <button
+                            onClick={() => {
+                                const url = gameTypeFilter === 'all'
+                                    ? `${API_ENDPOINTS.history}/export`
+                                    : `${API_ENDPOINTS.history}/export?game_type=${gameTypeFilter}`;
+                                window.open(url, '_blank');
+                            }}
+                            className="px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 border border-emerald-500/30 hover:bg-emerald-500/10 transition-all bg-surface text-emerald-400 hover:text-emerald-300"
+                        >
+                            <HistoryIcon className="w-4 h-4" />
+                            Export History
                         </button>
                     </div>
                     <button
