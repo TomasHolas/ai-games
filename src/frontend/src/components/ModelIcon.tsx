@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Wind, User } from 'lucide-react';
+import { Wind, User } from 'lucide-react';
 
 interface ModelIconProps {
     model?: string;
@@ -47,6 +47,8 @@ export const ModelIcon: React.FC<ModelIconProps> = ({ model = "", provider = "",
         imgIconSrc = "/icons/claude.png";
     } else if (normalizedProvider.includes("google") || normalizedModel.includes("gemini")) {
         imgIconSrc = "/icons/google-gemini.png";
+    } else if (normalizedModel.includes("phi")) {
+        imgIconSrc = "/icons/Phi.png";
     }
 
     if (imgIconSrc) {
@@ -69,13 +71,13 @@ export const ModelIcon: React.FC<ModelIconProps> = ({ model = "", provider = "",
     }
 
     // Determine icon and color based on provider or model name for non-image icons
-    let Icon: any = Cpu; // Default generic icon
+    let Icon: any = null;
     let colorClass = "text-gray-400";
 
     if (normalizedProvider === "user" || normalizedModel.includes("human")) {
         Icon = User;
         colorClass = "text-emerald-400";
-    } else if (normalizedProvider.includes("openai") || normalizedModel.includes("phi")) {
+    } else if (normalizedProvider.includes("openai")) {
         Icon = OpenAIIcon;
         colorClass = "text-emerald-500";
     } else if (normalizedProvider.includes("google") || normalizedModel.includes("gemini")) {
@@ -92,9 +94,27 @@ export const ModelIcon: React.FC<ModelIconProps> = ({ model = "", provider = "",
         colorClass = "text-blue-600";
     }
 
+    if (Icon) {
+        return (
+            <div className={`flex items-center justify-center shrink-0 ${className}`} title={`${provider || 'System'} - ${model}`}>
+                <Icon size={boxSize} className={colorClass} fill={Icon === User ? "none" : "currentColor"} strokeWidth={Icon === User ? 2.5 : undefined} />
+            </div>
+        );
+    }
+
+    // Default fallback image
     return (
         <div className={`flex items-center justify-center shrink-0 ${className}`} title={`${provider || 'System'} - ${model}`}>
-            <Icon size={boxSize} className={colorClass} fill={Icon === User ? "none" : "currentColor"} strokeWidth={Icon === User ? 2.5 : undefined} />
+            <img
+                src="/icons/default.jpg"
+                alt={model || 'Model'}
+                style={{
+                    width: boxSize,
+                    height: boxSize,
+                    objectFit: 'cover'
+                }}
+                className="rounded-sm"
+            />
         </div>
     );
 };
